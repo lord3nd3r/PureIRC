@@ -676,7 +676,7 @@ function closeTab(tab) {
 
 function connectIrc() {
   let nickname = document.getElementById('irc-nickname').value.trim();
-  let channel = document.getElementById('irc-channel-input').value.trim() || '#lobby';
+  let channel = document.getElementById('irc-channel-input').value.trim() || '#PureIRC';
   if (!channel.startsWith('#')) channel = '#' + channel;
   const useSSL = document.getElementById('irc-ssl')?.checked || false;
 
@@ -785,7 +785,7 @@ function handleIrcMessage(data) {
       showBuffer('*status');
 
       // Join the initial channel
-      const initCh = window._ircInitialChannel || '#lobby';
+      const initCh = window._ircInitialChannel || '#PureIRC';
       ws.send(JSON.stringify({ type: 'join', channel: initCh }));
       break;
 
