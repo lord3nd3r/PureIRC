@@ -18,8 +18,7 @@
     "botUsername": "purebot",
     "botRealname": "Pure IRC Bot",
     "botVersion": "PureBot v1.0",
-    "userPrefix": "PureUser",
-    "maxChannels": 280
+    "userPrefix": "PureUser"
   },
   "branding": {
     "icon": "radio",

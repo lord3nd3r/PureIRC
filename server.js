@@ -9,6 +9,7 @@ import { fileURLToPath } from 'url';
 import { createServer } from 'http';
 import routes from './api/routes.js';
 import { attachGateway } from './services/irc-gateway.js';
+import getCache from './services/irc-cache.js';
 
 // Load environment variables
 dotenv.config();
@@ -86,8 +87,23 @@ global.appConfig = getFinalConfig();
 console.log('[Config] Loaded with IRC host:', global.appConfig.irc.host);
 
 // ========== CONFIG ENDPOINT ==========
-app.get('/api/config', (req, res) => {
-  res.json(getFinalConfig());
+app.get('/api/config', async (req, res) => {
+  const config = getFinalConfig();
+  
+  // Add real channel count from IRC cache
+  try {
+    const cache = getCache();
+    const channels = await cache.getChannels();
+    config.irc.maxChannels = channels.length;
+  } catch (err) {
+    console.warn('[Config] Could not fetch live channel count:', err.message);
+    // Fall back to config value if available
+    if (!config.irc.maxChannels) {
+      config.irc.maxChannels = 0;
+    }
+  }
+  
+  res.json(config);
 });
 
 // ========== API ROUTES ==========
@@ -103,7 +119,7 @@ app.get('/health', (req, res) => {
 });
 
 // ========== TEMPLATE RENDERING ==========
-function renderTemplate(filePath, res) {
+async function renderTemplate(filePath, res) {
   const config = getFinalConfig();
   const siteName = config.site?.name || 'PureIRC';
   const domain = config.site?.domain || 'pureirc.com';
@@ -118,7 +134,16 @@ function renderTemplate(filePath, res) {
   const ircPort = String(config.irc?.port || 6667);
   const ircPortSSL = String(config.irc?.portSSL || 6697);
 
-  const maxChannels = String(config.irc?.maxChannels || 280);
+  // Fetch live channel count from IRC cache
+  let maxChannels = '0';
+  try {
+    const cache = getCache();
+    const channels = await cache.getChannels();
+    maxChannels = String(channels.length || 0);
+  } catch (err) {
+    console.warn('[Template] Could not fetch live channel count:', err.message);
+    maxChannels = '0';
+  }
 
   let html = fs.readFileSync(filePath, 'utf8');
   html = html.replace(/\{\{SITE_NAME\}\}/g, siteName);
@@ -141,13 +166,13 @@ function renderTemplate(filePath, res) {
 }
 
 // ========== ROOT ROUTE ==========
-app.get('/', (req, res) => {
-  renderTemplate(path.join(__dirname, 'public', 'index.html'), res);
+app.get('/', async (req, res) => {
+  await renderTemplate(path.join(__dirname, 'public', 'index.html'), res);
 });
 
 // ========== CHAT STANDALONE ==========
-app.get('/chat', (req, res) => {
-  renderTemplate(path.join(__dirname, 'public', 'chat.html'), res);
+app.get('/chat', async (req, res) => {
+  await renderTemplate(path.join(__dirname, 'public', 'chat.html'), res);
 });
 
 // ========== ERROR HANDLING ==========
