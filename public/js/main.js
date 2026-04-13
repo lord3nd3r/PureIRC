@@ -1033,10 +1033,22 @@ function handleIrcMessage(data) {
       break;
     }
 
-    case 'userlist':
-      channelUsers[normChan(data.channel)] = data.users;
-      if (normChan(data.channel) === normChan(currentIrcChannel)) renderUserList();
+    case 'userlist': {
+      const chKey = normChan(data.channel);
+      const existing = channelUsers[chKey] || [];
+      // Merge: preserve locally-tracked modes from earlier mode events
+      // that the NAMES reply might not yet reflect (race condition)
+      channelUsers[chKey] = data.users.map(u => {
+        const prev = existing.find(e => e.nick === u.nick);
+        if (prev && prev.modes.length > 0) {
+          const merged = [...new Set([...u.modes, ...prev.modes])];
+          return { nick: u.nick, modes: merged };
+        }
+        return u;
+      });
+      if (chKey === normChan(currentIrcChannel)) renderUserList();
       break;
+    }
 
     case 'mode': {
       const chKey = normChan(data.channel);
