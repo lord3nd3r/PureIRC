@@ -1,16 +1,16 @@
 {
   "site": {
-    "name": "PureIRC",
-    "fullName": "PureIRC Network",
-    "domain": "pureirc.com",
+    "name": "3nd3r.net",
+    "fullName": "3nd3r.net Network",
+    "domain": "3nd3r.net",
     "description": "A free, open, and welcoming IRC network. Connect with thousands of users across hundreds of channels — no registration required.",
     "favicon": "vite.svg"
   },
   "irc": {
-    "host": "irc.pureirc.com",
+    "host": "irc.rizon.net",
     "port": 6667,
     "portSSL": 6697,
-    "defaultChannel": "#PureIRC",
+    "defaultChannel": "#3nd3r",
     "botName": "PureBot",
     "botUsername": "purebot",
     "botRealname": "Pure IRC Bot",
@@ -22,14 +22,10 @@
     "defaultTheme": "cyan"
   },
   "ui": {
-    "pageTitle": "PureIRC — Free IRC Network",
-    "chatPageTitle": "PureIRC — Web Chat",
-    "headerTitle": "PureIRC Web Client",
-    "modalTitle": "Connect to PureIRC",
-    "showThemeSwitcher": false
+    "showThemeSwitcher": true
   },
   "social": {
-    "supportEmail": "support@pureirc.com",
+    "supportEmail": "lord3nd3r@gmail.com",
     "supportChannel": "#help",
     "githubUrl": "https://github.com/pureirc/network-website"
   },

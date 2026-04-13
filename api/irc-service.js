@@ -19,14 +19,18 @@ class IRCService {
   async connect() {
     return new Promise((resolve, reject) => {
       try {
+        // Use global config or fallback to env vars
+        const cfg = global.appConfig || {};
+        const ircConfig = cfg.irc || {};
+
         const config = {
-          host: process.env.IRC_HOST || 'irc.pureirc.com',
-          port: parseInt(process.env.IRC_PORT || 6667),
-          nick: process.env.IRC_NICK || 'PureBot',
-          username: process.env.IRC_USERNAME || 'purebot',
-          realname: process.env.IRC_REALNAME || 'Pure IRC Bot',
+          host: process.env.IRC_HOST || ircConfig.host || 'irc.example.com',
+          port: parseInt(process.env.IRC_PORT || ircConfig.port || 6667),
+          nick: process.env.IRC_NICK || ircConfig.botName || 'Bot',
+          username: process.env.IRC_USERNAME || ircConfig.botUsername || 'bot',
+          realname: process.env.IRC_REALNAME || ircConfig.botRealname || 'Bot User',
           tls: process.env.IRC_USE_SSL === 'true',
-          version: 'PureBot v1.0',
+          version: ircConfig.botVersion || 'Bot v1.0',
           auto_reconnect: false // we handle reconnect ourselves
         };
 
@@ -222,11 +226,14 @@ class IRCService {
         return reject(new Error('IRC client not connected'));
       }
 
+      const cfg = global.appConfig || {};
+      const ircConfig = cfg.irc || {};
+
       const stats = {
         timestamp: new Date(),
         connected: this.connected,
-        host: process.env.IRC_HOST || 'irc.pureirc.com',
-        port: parseInt(process.env.IRC_PORT || 6667),
+        host: process.env.IRC_HOST || ircConfig.host || 'irc.example.com',
+        port: parseInt(process.env.IRC_PORT || ircConfig.port || 6667),
         usersOnline: 0,
         totalChannels: 0,
         operators: 0,

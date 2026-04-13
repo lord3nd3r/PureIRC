@@ -74,6 +74,10 @@ function getFinalConfig() {
   return config;
 }
 
+// Make config globally available to all modules
+global.appConfig = getFinalConfig();
+console.log('[Config] Loaded with IRC host:', global.appConfig.irc.host);
+
 // ========== API ROUTES ==========
 app.use('/api', routes);
 

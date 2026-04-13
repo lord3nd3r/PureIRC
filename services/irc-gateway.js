@@ -1,10 +1,21 @@
 import { WebSocketServer } from 'ws';
 import { Client as IrcClient } from 'irc-framework';
 
-const IRC_HOST = process.env.IRC_HOST || 'irc.pureirc.com';
-const IRC_PORT = parseInt(process.env.IRC_PORT, 10) || 6667;
-const IRC_SSL_PORT = parseInt(process.env.IRC_SSL_PORT, 10) || 6697;
-const WEBIRC_PASSWORD = process.env.WEBIRC_PASSWORD || '';
+// Get IRC config from global app config or environment/defaults
+function getIrcConfig() {
+  const cfg = global.appConfig || {};
+  const ircConfig = cfg.irc || {};
+  
+  return {
+    host: process.env.IRC_HOST || ircConfig.host || 'irc.example.com',
+    port: parseInt(process.env.IRC_PORT || ircConfig.port || 6667),
+    sslPort: parseInt(process.env.IRC_SSL_PORT || ircConfig.portSSL || 6697),
+    webircPassword: process.env.WEBIRC_PASSWORD || ''
+  };
+}
+
+const CONFIG = getIrcConfig();
+const WEBIRC_PASSWORD = CONFIG.webircPassword;
 const MAX_CONNECTIONS_PER_IP = 3;
 const CONNECTION_TIMEOUT = 30000;
 const MAX_MESSAGE_LENGTH = 512;
@@ -82,7 +93,7 @@ export function attachGateway(server) {
             nickname = 'PureUser' + Math.floor(Math.random() * 9999);
           }
           const useSSL = Boolean(msg.ssl);
-          const port = useSSL ? IRC_SSL_PORT : IRC_PORT;
+          const port = useSSL ? CONFIG.sslPort : CONFIG.port;
 
           ircClient = new IrcClient();
 
@@ -95,11 +106,11 @@ export function attachGateway(server) {
           }, CONNECTION_TIMEOUT);
 
           const connectOpts = {
-            host: IRC_HOST,
+            host: CONFIG.host,
             port: port,
             nick: nickname,
             username: 'webchat',
-            gecos: 'PureIRC Web Client',
+            gecos: 'Web Client',
             tls: useSSL,
             rejectUnauthorized: false,
             auto_reconnect: false,
@@ -128,7 +139,7 @@ export function attachGateway(server) {
             send({
               type: 'connected',
               nickname: ircClient.user.nick,
-              server: IRC_HOST,
+              server: CONFIG.host,
             });
           });
 
