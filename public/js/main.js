@@ -62,7 +62,8 @@ async function loadChannels() {
   try {
     const response = await fetch(`${API_BASE}/channels`);
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    cachedChannels = await response.json();
+    const json = await response.json();
+    cachedChannels = json.data || json;
     renderChannels();
   } catch (error) {
     console.warn('[Channels] Failed to load:', error.message);
@@ -78,7 +79,8 @@ async function loadStats() {
   try {
     const response = await fetch(`${API_BASE}/stats`);
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    cachedStats = await response.json();
+    const json = await response.json();
+    cachedStats = json.data || json;
     renderStats();
   } catch (error) {
     console.warn('[Stats] Failed to load:', error.message);
@@ -147,14 +149,14 @@ function renderChannelsStatic() {
  * Render server stats
  */
 function renderStats() {
-  const usersOnlineEl = document.querySelector('[data-stat="users-online"]');
+  const usersOnlineEl = document.querySelector('[data-stat="users"]');
   const channelsEl = document.querySelector('[data-stat="channels"]');
 
   if (usersOnlineEl && cachedStats.usersOnline !== undefined) {
     usersOnlineEl.textContent = cachedStats.usersOnline.toLocaleString();
   }
-  if (channelsEl && cachedStats.networksChannels !== undefined) {
-    channelsEl.textContent = cachedStats.networksChannels.toLocaleString();
+  if (channelsEl && cachedStats.totalChannels !== undefined) {
+    channelsEl.textContent = cachedStats.totalChannels.toLocaleString();
   }
 }
 
