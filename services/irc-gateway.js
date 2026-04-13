@@ -307,6 +307,25 @@ export function attachGateway(server) {
             }
           });
 
+          ircClient.on('whois', (event) => {
+            send({
+              type: 'whois',
+              nick: event.nick || '',
+              ident: event.ident || '',
+              hostname: event.hostname || '',
+              real_name: event.real_name || '',
+              server: event.server || '',
+              server_info: event.server_info || '',
+              channels: event.channels || '',
+              idle: event.idle || 0,
+              logon: event.logon || 0,
+              actual_ip: event.actual_ip || '',
+              account: event.account || '',
+              secure: !!event.secure,
+              time: Date.now(),
+            });
+          });
+
           ircClient.on('motd', (event) => {
             send({
               type: 'motd',

@@ -1102,6 +1102,29 @@ function handleIrcMessage(data) {
       appendStatusMessage(`<div class="msg-line msg-notice">⚠ ${escapeHtml(data.error || 'Error')}: ${escapeHtml(data.reason)}</div>`);
       break;
 
+    case 'whois': {
+      const lines = [];
+      lines.push(`<span class="text-blue-400">${escapeHtml(data.nick)}</span> (${escapeHtml(data.ident)}@${escapeHtml(data.hostname)})`);
+      if (data.real_name) lines.push(`  realname: ${escapeHtml(data.real_name)}`);
+      if (data.server) lines.push(`  server  : ${escapeHtml(data.server)}${data.server_info ? ' (' + escapeHtml(data.server_info) + ')' : ''}`);
+      if (data.channels) lines.push(`  channels: ${escapeHtml(data.channels)}`);
+      if (data.account) lines.push(`  account : ${escapeHtml(data.account)}`);
+      if (data.secure) lines.push(`  secure  : using a secure connection`);
+      if (data.idle) {
+        const idleMins = Math.floor(data.idle / 60);
+        const idleSecs = data.idle % 60;
+        lines.push(`  idle    : ${idleMins}m ${idleSecs}s`);
+      }
+      if (data.logon) {
+        const logonDate = new Date(data.logon * 1000).toLocaleString();
+        lines.push(`  signon  : ${logonDate}`);
+      }
+      if (data.actual_ip) lines.push(`  ip      : ${escapeHtml(data.actual_ip)}`);
+      const html = lines.map(l => `<div class="msg-line msg-notice">${l}</div>`).join('');
+      appendToBuffer(currentIrcChannel, html);
+      break;
+    }
+
     case 'error':
       appendStatusMessage(`<div class="msg-line msg-notice">⚠ ${escapeHtml(data.message)}</div>`);
       break;
