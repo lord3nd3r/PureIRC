@@ -191,6 +191,96 @@ CORS_ORIGIN=https://pureirc.com
 
 ---
 
+## WEBIRC (Real Client IPs)
+
+By default, all web chat users appear to connect from the server's IP address. To show each user's real IP/hostname on IRC, you need to configure **WEBIRC** on both the gateway and the IRC server.
+
+### How It Works
+
+When a user connects via the web client, the gateway sends a `WEBIRC` command to the IRC server before registration:
+
+```
+WEBIRC <password> webchat <user-ip> <user-ip>
+```
+
+The IRC server verifies the password and source IP match a trusted WEBIRC block, then uses the provided user IP as the connecting client's address instead of the server's.
+
+### Step 1: Configure the IRCd
+
+PureIRC runs **solanum** (charybdis fork). Add a CGI:IRC/WEBIRC block to your `ircd.conf`:
+
+**Option A — `auth` block (solanum/charybdis):**
+
+```
+auth {
+    /* Your web server's IP — the one IRC sees connections from */
+    user = "*@2604:2dc0:101:200::1584";  /* IPv6 */
+    /* user = "*@YOUR.SERVER.IPv4";       /* IPv4 — add both if needed */
+
+    password = "a-strong-secret-here";
+    spoof = "webchat.pureirc.com";
+    class = "users";
+};
+```
+
+**Option B — `cgiirc` block (if your IRCd version supports it):**
+
+```
+cgiirc {
+    type = "webirc";
+    host = "2604:2dc0:101:200::1584";
+    password = "a-strong-secret-here";
+};
+```
+
+After editing, rehash or restart the IRCd:
+
+```bash
+# From IRC as an oper:
+/rehash
+
+# Or restart the service:
+sudo systemctl restart solanum
+```
+
+### Step 2: Set the Password in .env
+
+Add the same password to your `.env` file on the web server:
+
+```env
+WEBIRC_PASSWORD=a-strong-secret-here
+```
+
+### Step 3: Restart the Web Server
+
+```bash
+sudo systemctl restart pureirc
+```
+
+### Verifying It Works
+
+Connect via the web client and check the connection notice on IRC:
+
+**Before WEBIRC (server IP shown):**
+```
+-lonestar.us.pureirc.com- *** Client connecting: SomeUser (webchat@vps-638d4e9a.vps.ovh.us) [2604:2dc0:101:200::1584]
+```
+
+**After WEBIRC (real client IP shown):**
+```
+-lonestar.us.pureirc.com- *** Client connecting: SomeUser (webchat@user-hostname.isp.com) [203.0.113.45]
+```
+
+### Important Notes
+
+- The `WEBIRC_PASSWORD` must match exactly between `.env` and the IRCd config
+- The IRCd must trust the IP that the web server connects from (your VPS IP)
+- If your server has both IPv4 and IPv6, add auth/cgiirc blocks for both addresses
+- If you're behind Cloudflare/Nginx, make sure the gateway reads `X-Forwarded-For` to get the real client IP (this is already handled)
+- Without `WEBIRC_PASSWORD` set, the gateway falls back to normal behavior (all users show server IP)
+
+---
+
 ## Architecture
 
 ```
