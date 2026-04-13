@@ -72,7 +72,14 @@
         <a href="#channels" class="px-4 py-2 text-sm text-gray-400 hover:text-white rounded-md hover:bg-white/5 transition-colors">Channels</a>
         <a href="#rules" class="px-4 py-2 text-sm text-gray-400 hover:text-white rounded-md hover:bg-white/5 transition-colors">Rules</a>
         <a href="#support" class="px-4 py-2 text-sm text-gray-400 hover:text-white rounded-md hover:bg-white/5 transition-colors">Support</a>
-        <div id="theme-switcher" class="ml-2 pl-2 border-l border-white/10 flex items-center gap-1"></div>
+        <div id="theme-switcher" class="ml-2 pl-2 border-l border-white/10 flex items-center gap-1.5">
+          <button onclick="window.themeManager&&window.themeManager.setTheme('cyan')" title="Cyan" style="background:#06b6d4" class="w-5 h-5 rounded-full border-2 border-white hover:scale-125 transition-all cursor-pointer"></button>
+          <button onclick="window.themeManager&&window.themeManager.setTheme('purple')" title="Purple" style="background:#a855f7" class="w-5 h-5 rounded-full border-2 border-transparent hover:scale-125 transition-all cursor-pointer"></button>
+          <button onclick="window.themeManager&&window.themeManager.setTheme('emerald')" title="Emerald" style="background:#10b981" class="w-5 h-5 rounded-full border-2 border-transparent hover:scale-125 transition-all cursor-pointer"></button>
+          <button onclick="window.themeManager&&window.themeManager.setTheme('rose')" title="Rose" style="background:#f43f5e" class="w-5 h-5 rounded-full border-2 border-transparent hover:scale-125 transition-all cursor-pointer"></button>
+          <button onclick="window.themeManager&&window.themeManager.setTheme('amber')" title="Amber" style="background:#f59e0b" class="w-5 h-5 rounded-full border-2 border-transparent hover:scale-125 transition-all cursor-pointer"></button>
+          <button onclick="window.themeManager&&window.themeManager.setTheme('blue')" title="Blue" style="background:#3b82f6" class="w-5 h-5 rounded-full border-2 border-transparent hover:scale-125 transition-all cursor-pointer"></button>
+        </div>
         <a href="javascript:void(0)" onclick="openIrcModal('#3nd3r')" class="ml-3 px-4 py-2 text-sm font-semibold bg-cyan-500 text-gray-950 rounded-lg hover:bg-cyan-400 transition-colors">Connect Now</a>
       </nav>
       <button id="mobile-menu-btn" class="md:hidden text-gray-400 hover:text-white transition-colors">
