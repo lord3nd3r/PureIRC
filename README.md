@@ -1,6 +1,6 @@
 # PureIRC
 
-A modern IRC network website with a built-in WebSocket-to-IRC gateway, tabbed web chat client, real-time channel data, and dynamic server statistics. Currently powering [3nd3r.net](http://snek.3nd3r.net:3000).
+A modern IRC network website with a built-in WebSocket-to-IRC gateway, tabbed web chat client, real-time channel data, and dynamic server statistics.
 
 ## Features
 
