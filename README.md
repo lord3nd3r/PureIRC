@@ -1,4 +1,4 @@
-# PureIRC Network Website
+# 3nd3r.net IRC Network Website
 
 A modern IRC network website with a built-in WebSocket-to-IRC gateway, tabbed web chat client, real-time channel data, and dynamic server statistics.
 
@@ -8,14 +8,15 @@ A modern IRC network website with a built-in WebSocket-to-IRC gateway, tabbed we
 - Custom WebSocket-to-IRC gateway — no third-party embed required
 - Tabbed interface with per-channel message buffers (like a real IRC client)
 - Status window for MOTD, server notices, and connection events
-- User list sidebar with op/voice prefixes and sorted display
-- `/join`, `/part`, `/nick`, `/me`, `/msg`, `/topic` commands
+- User list sidebar with full prefix support (~, &, @, %, +)
+- Optional NickServ password field for auto-identify on connect
+- Comprehensive command support: channel ops, services, oper commands, and more
 - Unread tab indicators, maximize mode, and standalone `/chat` page
 - IRC formatting codes stripped automatically
 
 **Live Channel Data**
 - Real-time user count per channel
-- Dynamic channel list synced with IRC server
+- Dynamic channel list synced with IRC server (top 18 displayed)
 - Auto-refresh every 45 seconds
 
 **Server Statistics**
@@ -27,10 +28,10 @@ A modern IRC network website with a built-in WebSocket-to-IRC gateway, tabbed we
 - Lucide icons (bundled locally)
 - Smooth animations and transitions
 - **6 built-in themes** (Cyan, Purple, Emerald, Rose, Amber, Blue)
-- Optional theme switcher UI
+- Theme switcher dropdown in header
 
 **Configurable Branding**
-- Centralized `config.json` for site name, IRC host, colors, and more
+- Centralized `config.json` for site name, IRC host, tagline, colors, and more
 - Environment variables override config values
 - Easy to adapt for different IRC networks without code changes
 
@@ -39,6 +40,7 @@ A modern IRC network website with a built-in WebSocket-to-IRC gateway, tabbed we
 - IRC protocol integration with in-memory cache
 - Helmet.js security headers, CORS, gzip compression
 - WebSocket gateway with per-IP rate limiting
+- No-cache headers for JS/HTML to prevent stale client code
 
 ---
 
@@ -78,23 +80,24 @@ The site branding, IRC host, and all UI text is configured in `config.json`. You
 ```json
 {
   "site": {
-    "name": "PureIRC",                          // Site name
-    "fullName": "PureIRC Network",              // Full name for footer
-    "domain": "pureirc.com",                    // Domain
-    "description": "A free, open... network."  // Hero description
+    "name": "3nd3r.net",
+    "fullName": "3nd3r.net Network",
+    "domain": "3nd3r.net",
+    "tagline": "The Internet\nRelay Chat Network",
+    "description": "A free, open... network."
   },
   "irc": {
-    "host": "irc.pureirc.com",                 // IRC server host
-    "port": 6667,                              // Default port
-    "portSSL": 6697,                           // SSL port
-    "defaultChannel": "#PureIRC"               // Channel to join
+    "host": "irc.rizon.net",
+    "port": 6667,
+    "portSSL": 6697,
+    "defaultChannel": "#3nd3r"
   },
   "branding": {
-    "defaultTheme": "cyan",                    // One of: cyan, purple, emerald, rose, amber, blue
-    "icon": "radio"                            // Lucide icon name
+    "defaultTheme": "cyan",
+    "icon": "radio"
   },
   "ui": {
-    "showThemeSwitcher": false                 // Show theme selector in header
+    "showThemeSwitcher": true
   }
 }
 ```
@@ -118,10 +121,10 @@ The site includes 6 built-in themes. Change the theme by editing `config.json`:
 ```json
 {
   "branding": {
-    "defaultTheme": "purple"  // cyan, purple, emerald, rose, amber, or blue
+    "defaultTheme": "purple"
   },
   "ui": {
-    "showThemeSwitcher": true  // Show theme picker in header for users
+    "showThemeSwitcher": true
   }
 }
 ```
@@ -141,7 +144,124 @@ Users can also pick their preferred theme (stored in browser localStorage) if th
 
 To add new themes, add them to the `themes` object in `config.json`.
 
-### Production Deployment (systemd)
+---
+
+## Web Chat Commands
+
+The built-in web chat client supports a comprehensive set of IRC commands. Type `/help` in the client to see the full list.
+
+### Channel
+| Command | Description |
+|---------|-------------|
+| `/join #channel` | Join a channel |
+| `/part [#channel]` | Leave current or specified channel |
+| `/topic [text]` | View or set channel topic |
+| `/invite nick [#channel]` | Invite a user to channel |
+| `/cycle` | Part and rejoin current channel |
+| `/names` | Refresh the user list |
+
+### User Modes
+| Command | Description |
+|---------|-------------|
+| `/op nick` | Give operator (+o) |
+| `/deop nick` | Remove operator (-o) |
+| `/voice nick` | Give voice (+v) |
+| `/devoice nick` | Remove voice (-v) |
+| `/hop nick` | Give halfop (+h) |
+| `/dehop nick` | Remove halfop (-h) |
+| `/admin nick` | Give admin/protect (+a) |
+| `/deadmin nick` | Remove admin (-a) |
+| `/owner nick` | Give owner (+q) |
+| `/deowner nick` | Remove owner (-q) |
+| `/kick nick [reason]` | Kick a user |
+| `/ban mask` | Set a ban (+b) |
+| `/unban mask` | Remove a ban (-b) |
+| `/kickban nick [reason]` | Ban then kick |
+| `/mode [modes]` | Set arbitrary channel/user modes |
+
+### Services
+| Command | Description |
+|---------|-------------|
+| `/ns <command>` | Send to NickServ |
+| `/cs <command>` | Send to ChanServ |
+| `/ms <command>` | Send to MemoServ |
+| `/bs <command>` | Send to BotServ |
+| `/hs <command>` | Send to HostServ |
+| `/os <command>` | Send to OperServ |
+| `/identify <password>` | Identify with NickServ |
+| `/ghost nick [pass]` | Ghost a nickname |
+| `/regain nick [pass]` | Regain a nickname |
+
+### Chat
+| Command | Description |
+|---------|-------------|
+| `/msg nick text` | Private message |
+| `/notice nick text` | Send a notice |
+| `/me action` | Action message |
+| `/ctcp nick command` | Send CTCP |
+
+### Info
+| Command | Description |
+|---------|-------------|
+| `/whois nick` | WHOIS query |
+| `/whowas nick` | WHOWAS query |
+| `/who [target]` | WHO query |
+| `/list` | List channels |
+| `/motd` | View MOTD |
+| `/version` | Server version |
+| `/time` | Server time |
+| `/ping` | Ping server |
+| `/stats [type]` | Server stats |
+
+### IRCop Commands
+| Command | Description |
+|---------|-------------|
+| `/oper user pass` | Authenticate as oper |
+| `/kill nick [reason]` | Kill a user |
+| `/kline [time] mask :reason` | K-line a user |
+| `/unkline mask` | Remove K-line |
+| `/gline mask` | G-line a user |
+| `/ungline mask` | Remove G-line |
+| `/zline ip` | Z-line an IP |
+| `/unzline ip` | Remove Z-line |
+| `/dline ip` | D-line an IP |
+| `/undline ip` | Remove D-line |
+| `/wallops text` | Broadcast to opers (wallops) |
+| `/globops text` | Broadcast to opers (globops) |
+| `/sajoin nick #channel` | Force-join a user |
+| `/sapart nick #channel` | Force-part a user |
+| `/sanick nick newnick` | Force nick change |
+| `/samode target modes` | Force mode change |
+| `/chghost nick hostname` | Change a user's host |
+| `/sethost hostname` | Set your own host |
+| `/chgident nick ident` | Change a user's ident |
+| `/chgname nick :realname` | Change a user's realname |
+| `/userip nick` | Get user's IP |
+| `/squit server` | Disconnect a server |
+| `/rehash` | Rehash IRCd config |
+| `/die` | Shut down the IRCd |
+| `/restart` | Restart the IRCd |
+| `/map` | Show server map |
+| `/links` | Show server links |
+| `/trace [target]` | Trace route |
+| `/modules` | List loaded modules |
+
+### Other
+| Command | Description |
+|---------|-------------|
+| `/nick newnick` | Change nickname |
+| `/away [message]` | Set away status |
+| `/back` | Clear away status |
+| `/quit [message]` | Disconnect |
+| `/clear` | Clear current buffer |
+| `/raw <line>` | Send raw IRC command |
+| `/help` | Show command list |
+
+Any unrecognized `/command` is sent as a raw IRC line.
+
+---
+
+## Production Deployment (systemd)
 
 Create a systemd service so it runs on boot and restarts on crash:
 
@@ -151,7 +271,7 @@ sudo nano /etc/systemd/system/pureirc.service
 
 ```ini
 [Unit]
-Description=PureIRC Website
+Description=3nd3r.net IRC Website
 After=network.target
 
 [Service]
@@ -181,7 +301,7 @@ journalctl -u pureirc -f
 
 ### Cloudflare Setup
 
-PureIRC works behind Cloudflare, but the WebSocket IRC gateway needs proper configuration.
+Works behind Cloudflare — the WebSocket IRC gateway needs proper configuration.
 
 **1. DNS**
 
@@ -189,7 +309,7 @@ Add an A record pointing your domain to your server IP. Enable the orange cloud 
 
 | Type | Name | Content | Proxy |
 |------|------|---------|-------|
-| A | pureirc.com | YOUR_SERVER_IP | Proxied |
+| A | 3nd3r.net | YOUR_SERVER_IP | Proxied |
 | A | www | YOUR_SERVER_IP | Proxied |
 
 **2. SSL/TLS**
@@ -198,7 +318,7 @@ Go to **SSL/TLS > Overview** and set encryption mode to **Full (strict)** if you
 
 Generate an origin certificate:
 - Go to **SSL/TLS > Origin Server > Create Certificate**
-- Save the cert and key on your server (e.g. `/etc/ssl/pureirc/`)
+- Save the cert and key on your server (e.g. `/etc/ssl/certs/`)
 - Update your reverse proxy (Nginx/Caddy) to use them
 
 **3. WebSocket Support**
@@ -216,10 +336,10 @@ You'll need Nginx (or Caddy) in front of Node.js to handle SSL and proxy request
 ```nginx
 server {
     listen 443 ssl http2;
-    server_name pureirc.com www.pureirc.com;
+    server_name 3nd3r.net www.3nd3r.net;
 
-    ssl_certificate     /etc/ssl/pureirc/cert.pem;
-    ssl_certificate_key /etc/ssl/pureirc/key.pem;
+    ssl_certificate     /etc/ssl/certs/cert.pem;
+    ssl_certificate_key /etc/ssl/certs/key.pem;
 
     location / {
         proxy_pass http://127.0.0.1:3000;
@@ -245,7 +365,7 @@ server {
 
 server {
     listen 80;
-    server_name pureirc.com www.pureirc.com;
+    server_name 3nd3r.net www.3nd3r.net;
     return 301 https://$host$request_uri;
 }
 ```
@@ -259,14 +379,14 @@ sudo nginx -t && sudo systemctl reload nginx
 ```env
 PORT=3000
 NODE_ENV=production
-CORS_ORIGIN=https://pureirc.com
+CORS_ORIGIN=https://3nd3r.net
 ```
 
 **6. Cloudflare Page Rules (optional)**
 
-- Cache static assets: `pureirc.com/js/*` → Cache Level: Cache Everything
-- Bypass cache for API: `pureirc.com/api/*` → Cache Level: Bypass
-- Bypass cache for WebSocket: `pureirc.com/ws/*` → Cache Level: Bypass
+- Cache static assets: `3nd3r.net/js/*` → Cache Level: Cache Everything
+- Bypass cache for API: `3nd3r.net/api/*` → Cache Level: Bypass
+- Bypass cache for WebSocket: `3nd3r.net/ws/*` → Cache Level: Bypass
 
 ---
 
@@ -286,28 +406,25 @@ The IRC server verifies the password and source IP match a trusted WEBIRC block,
 
 ### Step 1: Configure the IRCd
 
-PureIRC runs **solanum** (charybdis fork). Add a CGI:IRC/WEBIRC block to your `ircd.conf`:
+Add a WEBIRC block to your IRCd config:
 
-**Option A — `auth` block (solanum/charybdis):**
+**auth block (solanum/charybdis):**
 
 ```
 auth {
-    /* Your web server's IP — the one IRC sees connections from */
-    user = "*@2604:2dc0:101:200::1584";  /* IPv6 */
-    /* user = "*@YOUR.SERVER.IPv4";       /* IPv4 — add both if needed */
-
+    user = "*@YOUR.SERVER.IP";
     password = "a-strong-secret-here";
-    spoof = "webchat.pureirc.com";
+    spoof = "webchat.3nd3r.net";
     class = "users";
 };
 ```
 
-**Option B — `cgiirc` block (if your IRCd version supports it):**
+**cgiirc block (if supported):**
 
 ```
 cgiirc {
     type = "webirc";
-    host = "2604:2dc0:101:200::1584";
+    host = "YOUR.SERVER.IP";
     password = "a-strong-secret-here";
 };
 ```
@@ -315,16 +432,12 @@ cgiirc {
 After editing, rehash or restart the IRCd:
 
 ```bash
-# From IRC as an oper:
 /rehash
-
-# Or restart the service:
+# or
 sudo systemctl restart solanum
 ```
 
 ### Step 2: Set the Password in .env
-
-Add the same password to your `.env` file on the web server:
 
 ```env
 WEBIRC_PASSWORD=a-strong-secret-here
@@ -342,20 +455,20 @@ Connect via the web client and check the connection notice on IRC:
 
 **Before WEBIRC (server IP shown):**
 ```
--lonestar.us.pureirc.com- *** Client connecting: SomeUser (webchat@vps-638d4e9a.vps.ovh.us) [2604:2dc0:101:200::1584]
+*** Client connecting: SomeUser (webchat@your-vps.host.com) [SERVER_IP]
 ```
 
 **After WEBIRC (real client IP shown):**
 ```
--lonestar.us.pureirc.com- *** Client connecting: SomeUser (webchat@user-hostname.isp.com) [203.0.113.45]
+*** Client connecting: SomeUser (webchat@user-isp.com) [203.0.113.45]
 ```
 
 ### Important Notes
 
 - The `WEBIRC_PASSWORD` must match exactly between `.env` and the IRCd config
-- The IRCd must trust the IP that the web server connects from (your VPS IP)
-- If your server has both IPv4 and IPv6, add auth/cgiirc blocks for both addresses
-- If you're behind Cloudflare/Nginx, make sure the gateway reads `X-Forwarded-For` to get the real client IP (this is already handled)
+- The IRCd must trust the IP that the web server connects from
+- If your server has both IPv4 and IPv6, add blocks for both addresses
+- The gateway already reads `X-Forwarded-For` for real client IPs behind reverse proxies
 - Without `WEBIRC_PASSWORD` set, the gateway falls back to normal behavior (all users show server IP)
 
 ---
@@ -367,24 +480,29 @@ Express Server (port 3000)
 ├── REST API
 │   ├── GET /api/channels — Channel list with user counts
 │   ├── GET /api/stats    — Server statistics
+│   ├── GET /api/config   — Site configuration for frontend
 │   └── GET /health       — Health check
 ├── WebSocket Gateway (/ws/irc)
 │   └── Per-client WebSocket ↔ IRC connection proxy
 │       ├── Rate limiting (3 connections per IP)
 │       ├── 30s connection timeout
+│       ├── NickServ auto-identify
+│       ├── Mode normalization (irc-framework → frontend)
 │       └── IRC formatting code stripping
 ├── Static Files (/public)
-│   ├── index.html      — Main site
+│   ├── index.html      — Main site with embedded chat modal
 │   ├── chat.html       — Standalone chat page
 │   └── js/main.js      — All frontend logic
 └── IRC Connection Layer
-    └── irc.pureirc.com:6667
+    └── irc.rizon.net:6667
 ```
 
 ### Frontend
 - Vanilla JavaScript — no build step, no frameworks
 - Per-channel message buffers with tab switching
 - Status window tab for server messages
+- Full user prefix display (~, &, @, %, +) with sorted user list
+- Mode change messages displayed in chat
 - Maximize toggle and open-in-new-tab support
 
 ---
@@ -454,7 +572,7 @@ Returns server status and uptime.
 ```
 ws://localhost:3000/ws/irc
 ```
-Per-client WebSocket connection that proxies to the IRC server. Supports `connect`, `join`, `part`, `message`, `action`, `nick`, and `raw` commands.
+Per-client WebSocket connection that proxies to the IRC server. Supports `connect`, `join`, `part`, `message`, `action`, `nick`, and `raw` commands. Optional `nsPassword` field on connect for NickServ auto-identify.
 
 ---
 
@@ -464,13 +582,9 @@ Create `.env` from `.env.example`:
 
 ```env
 # IRC Server
-IRC_HOST=irc.pureirc.com
+IRC_HOST=irc.rizon.net
 IRC_PORT=6667
 IRC_SSL_PORT=6697
-IRC_USE_SSL=false
-IRC_NICK=PureBot
-IRC_USERNAME=purebot
-IRC_REALNAME=Pure IRC Bot
 
 # Server
 PORT=3000
@@ -479,8 +593,8 @@ NODE_ENV=development
 # CORS
 CORS_ORIGIN=http://localhost:3000
 
-# Cache
-CACHE_TTL_SECONDS=45
+# WEBIRC (optional)
+WEBIRC_PASSWORD=
 ```
 
 ---
@@ -495,6 +609,7 @@ npm run dev        # Start in development mode
 ```bash
 curl http://localhost:3000/api/channels
 curl http://localhost:3000/api/stats
+curl http://localhost:3000/api/config
 curl http://localhost:3000/health
 ```
 
@@ -552,6 +667,8 @@ The `/api/config` endpoint serves the configuration to the frontend, and all har
 - WebSocket rate limiting (3 connections per IP)
 - IRC message length capped at 512 bytes
 - Input sanitization (HTML escaping)
+- No-cache headers on JS/HTML to prevent stale code
+- NickServ passwords are never stored — used only for the single connection
 - No sensitive data exposed to frontend
 
 ---
@@ -566,51 +683,19 @@ MIT
 
 ### Stats showing 0 users / 0 channels
 - The bot IRC connection may have timed out on first start. Wait 10-15 seconds for the retry.
-- Check server logs: `journalctl -u pureirc -f` — look for `[Cache] Fetched server stats: X users online`
-- Verify IRC connectivity: `telnet irc.pureirc.com 6667`
-- Ensure `IRC_HOST` and `IRC_PORT` are correct in `.env`
+- Check server logs: `journalctl -u pureirc -f`
+- Verify IRC connectivity: `telnet irc.rizon.net 6667`
+- Ensure `IRC_HOST` and `IRC_PORT` are correct in `.env` or `config.json`
 
 ### Web chat won't connect
-- SSL to `irc.pureirc.com:6697` does not work. Make sure the SSL checkbox is **unchecked**.
+- Check the browser console (F12) for WebSocket errors.
 - If behind Cloudflare, ensure WebSockets are enabled and the Nginx proxy passes `Upgrade` headers.
-- Check browser console (F12) for WebSocket errors.
+- Verify the server is running: `curl http://localhost:3000/health`
 
 ### Styling broken (black & white page)
-- Tailwind CSS loads from CDN. Check your CSP doesn't block `https://cdn.tailwindcss.com`.
+- Tailwind CSS loads from CDN. Check your CSP doesn't block it.
 - Hard refresh: Ctrl+Shift+R
 
-### Icons missing
-- Lucide is bundled locally at `/js/lucide.min.js`. Verify it loads: `curl http://localhost:3000/js/lucide.min.js | head -1`
-
----
-
-## License
-
-MIT
-
----
-
-## Support
-
-- 📖 **Documentation**: See `/docs` folder
-- 🐛 **Report Issues**: GitHub Issues
-- 💬 **Chat**: Join #help on PureIRC
-- 📧 **Email**: support@pureirc.com
-
----
-
-## Credits
-
-Built with:
-- [Express.js](https://expressjs.com/) — Web framework
-- [Tailwind CSS](https://tailwindcss.com/) — Styling
-- [Lucide Icons](https://lucide.dev/) — Icons
-- [KiwiIRC](https://kiwiirc.com/) — Web client
-- [Node IRC](https://github.com/Martyn/node-irc) — IRC protocol
-
----
-
-**Made with ❤️ for the IRC community**
-
-[Website](https://pureirc.com) • [IRC Server](irc://irc.pureirc.com) • [GitHub](https://github.com/pureirc/network-website)
-
+### User prefixes not showing
+- Prefixes are set by mode events after joining. If the NAMES reply arrives after mode changes, the merge logic preserves them.
+- If still missing, check browser console for mode-related errors.
