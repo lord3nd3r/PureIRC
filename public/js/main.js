@@ -174,7 +174,7 @@ function renderChannels() {
   grid.innerHTML = '';
 
   const allChannels = cachedChannels.length > 0 ? cachedChannels : getDefaultChannels();
-  const channels = allChannels.slice(0, 9);
+  const channels = allChannels.slice(0, 18);
 
   channels.forEach(ch => {
     const colorClass = categoryColors[ch.category] || 'text-gray-400 bg-white/5 border-white/10';
@@ -432,7 +432,7 @@ function setupChannelQuickPicks() {
 
   quickPicks.innerHTML = '';
   const allChannels = cachedChannels.length > 0 ? cachedChannels : getDefaultChannels();
-  const channels = allChannels.slice(0, 9);
+  const channels = allChannels.slice(0, 18);
 
   channels.forEach(ch => {
     quickPicks.innerHTML += `
