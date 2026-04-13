@@ -14,8 +14,7 @@ function getIrcConfig() {
   };
 }
 
-const CONFIG = getIrcConfig();
-const WEBIRC_PASSWORD = CONFIG.webircPassword;
+const WEBIRC_PASSWORD = process.env.WEBIRC_PASSWORD || '';
 const MAX_CONNECTIONS_PER_IP = 3;
 const CONNECTION_TIMEOUT = 30000;
 const MAX_MESSAGE_LENGTH = 512;
@@ -99,6 +98,7 @@ export function attachGateway(server) {
             nickname = 'PureUser' + Math.floor(Math.random() * 9999);
           }
           const useSSL = Boolean(msg.ssl);
+          const CONFIG = getIrcConfig();
           const port = useSSL ? CONFIG.sslPort : CONFIG.port;
 
           console.log(`[Gateway] Connect request: nick=${nickname}, host=${CONFIG.host}, port=${port}, ssl=${useSSL}`);
