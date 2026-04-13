@@ -38,21 +38,156 @@ A modern IRC network website with a built-in WebSocket-to-IRC gateway, tabbed we
 ## Quick Start
 
 ### Requirements
-- Node.js 18+
-- npm 9+
+- Node.js 18+ ([download](https://nodejs.org/))
+- npm 9+ (included with Node.js)
+- A server/VPS with outbound access to IRC port 6667
 
 ### Installation
+
 ```bash
+# Clone the repository
 git clone https://github.com/lord3nd3r/PureIRC.git
 cd PureIRC
+
+# Install dependencies
 npm install
+
+# Copy the example environment file and edit it
 cp .env.example .env
+nano .env  # or your preferred editor
+
+# Start the server
 npm start
 ```
 
-Visit: **http://localhost:3000**
+The server starts on port 3000 by default. Visit **http://localhost:3000** to see the site, and **http://localhost:3000/chat** for the standalone IRC web client.
 
-The web chat client is available at **http://localhost:3000/chat** (standalone) or via the "Connect" buttons on the main page (modal).
+### Production Deployment (systemd)
+
+Create a systemd service so it runs on boot and restarts on crash:
+
+```bash
+sudo nano /etc/systemd/system/pureirc.service
+```
+
+```ini
+[Unit]
+Description=PureIRC Website
+After=network.target
+
+[Service]
+Type=simple
+User=your-user
+WorkingDirectory=/path/to/PureIRC
+ExecStart=/usr/bin/node server.js
+Restart=on-failure
+RestartSec=5
+Environment=NODE_ENV=production
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable pureirc
+sudo systemctl start pureirc
+
+# Check status
+sudo systemctl status pureirc
+
+# View logs
+journalctl -u pureirc -f
+```
+
+### Cloudflare Setup
+
+PureIRC works behind Cloudflare, but the WebSocket IRC gateway needs proper configuration.
+
+**1. DNS**
+
+Add an A record pointing your domain to your server IP. Enable the orange cloud (proxied).
+
+| Type | Name | Content | Proxy |
+|------|------|---------|-------|
+| A | pureirc.com | YOUR_SERVER_IP | Proxied |
+| A | www | YOUR_SERVER_IP | Proxied |
+
+**2. SSL/TLS**
+
+Go to **SSL/TLS > Overview** and set encryption mode to **Full (strict)** if you have a valid cert on your origin, or **Full** with a Cloudflare Origin CA cert.
+
+Generate an origin certificate:
+- Go to **SSL/TLS > Origin Server > Create Certificate**
+- Save the cert and key on your server (e.g. `/etc/ssl/pureirc/`)
+- Update your reverse proxy (Nginx/Caddy) to use them
+
+**3. WebSocket Support**
+
+Cloudflare proxies WebSocket connections automatically on all plans. No extra config needed — the `/ws/irc` gateway will work through Cloudflare as long as:
+- Your origin server accepts the connection on the same port
+- You're using `wss://` (Cloudflare upgrades to HTTPS)
+
+Verify in **Network > WebSockets** that WebSockets are enabled (on by default).
+
+**4. Reverse Proxy (Nginx)**
+
+You'll need Nginx (or Caddy) in front of Node.js to handle SSL and proxy requests:
+
+```nginx
+server {
+    listen 443 ssl http2;
+    server_name pureirc.com www.pureirc.com;
+
+    ssl_certificate     /etc/ssl/pureirc/cert.pem;
+    ssl_certificate_key /etc/ssl/pureirc/key.pem;
+
+    location / {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # WebSocket gateway
+    location /ws/irc {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_read_timeout 86400s;
+        proxy_send_timeout 86400s;
+    }
+}
+
+server {
+    listen 80;
+    server_name pureirc.com www.pureirc.com;
+    return 301 https://$host$request_uri;
+}
+```
+
+```bash
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+**5. Update .env for Production**
+
+```env
+PORT=3000
+NODE_ENV=production
+CORS_ORIGIN=https://pureirc.com
+```
+
+**6. Cloudflare Page Rules (optional)**
+
+- Cache static assets: `pureirc.com/js/*` → Cache Level: Cache Everything
+- Bypass cache for API: `pureirc.com/api/*` → Cache Level: Bypass
+- Bypass cache for WebSocket: `pureirc.com/ws/*` → Cache Level: Bypass
 
 ---
 
@@ -204,60 +339,29 @@ MIT
 
 ## Troubleshooting
 
-### Channels showing but user count is 0
-- Check IRC server connection: `telnet irc.pureirc.com 6667`
-- Check server logs for `[IRC]` errors
-- Ensure IRC_HOST and IRC_PORT are correct in `.env`
+### Stats showing 0 users / 0 channels
+- The bot IRC connection may have timed out on first start. Wait 10-15 seconds for the retry.
+- Check server logs: `journalctl -u pureirc -f` — look for `[Cache] Fetched server stats: X users online`
+- Verify IRC connectivity: `telnet irc.pureirc.com 6667`
+- Ensure `IRC_HOST` and `IRC_PORT` are correct in `.env`
 
-### Styling broken (black & white)
-- Clear browser cache (Ctrl+Shift+Delete)
-- Check Tailwind CDN is accessible: curl https://cdn.tailwindcss.com
-- Check browser console for CSP warnings
+### Web chat won't connect
+- SSL to `irc.pureirc.com:6697` does not work. Make sure the SSL checkbox is **unchecked**.
+- If behind Cloudflare, ensure WebSockets are enabled and the Nginx proxy passes `Upgrade` headers.
+- Check browser console (F12) for WebSocket errors.
 
-### Icons not showing (empty squares)
-- Check `/js/lucide.min.js` loads: curl http://localhost:3000/js/lucide.min.js
-- Ensure Lucide initialization runs in main.js
+### Styling broken (black & white page)
+- Tailwind CSS loads from CDN. Check your CSP doesn't block `https://cdn.tailwindcss.com`.
+- Hard refresh: Ctrl+Shift+R
 
-### Connection modal doesn't work
-- Check browser console for JavaScript errors
-- Ensure KiwiIRC URL is valid in main.js
-- Test IRC connection manually
-
-See [troubleshooting section](docs/SETUP.md#troubleshooting) for more help.
-
----
-
-## Roadmap
-
-- [x] Live channel list with user counts
-- [x] Server statistics widget
-- [x] Responsive dark theme
-- [x] Web client integration
-- [x] API documentation
-- [ ] User accounts & registration
-- [ ] Channel favorites
-- [ ] Search & filter
-- [ ] Custom web IRC client
-- [ ] Admin dashboard
-- [ ] Analytics & statistics
-- [ ] WebSocket real-time updates
-
----
-
-## Contributing
-
-Contributions welcome! Please:
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+### Icons missing
+- Lucide is bundled locally at `/js/lucide.min.js`. Verify it loads: `curl http://localhost:3000/js/lucide.min.js | head -1`
 
 ---
 
 ## License
 
-Licensed under the MIT License — see LICENSE file for details
+MIT
 
 ---
 
