@@ -165,15 +165,15 @@ function renderStats() {
  */
 function getDefaultChannels() {
   return [
-    { name: '#lobby', topic: 'General chat and welcome newcomers to PureIRC', users: 312, category: 'General', pinned: true },
-    { name: '#help', topic: 'Need assistance? Ask the community here', users: 198, category: 'Support', pinned: true },
-    { name: '#tech', topic: 'Programming, hardware, software & all things tech', users: 247, category: 'Technology', pinned: false },
-    { name: '#gaming', topic: 'Games, streams, reviews and everything gaming', users: 189, category: 'Gaming', pinned: false },
-    { name: '#linux', topic: 'The Linux community — distros, tips, and support', users: 164, category: 'Technology', pinned: false },
-    { name: '#music', topic: 'Share what you\'re listening to and discover new artists', users: 122, category: 'Entertainment', pinned: false },
-    { name: '#dev', topic: 'Software development, projects, and code reviews', users: 143, category: 'Technology', pinned: false },
-    { name: '#offtopic', topic: 'Everything and anything goes (within rules)', users: 211, category: 'General', pinned: false },
-    { name: '#anime', topic: 'Manga, anime, and Japanese media discussions', users: 98, category: 'Entertainment', pinned: false }
+    { name: '#PureIRC', topic: 'Welcome to PureIRC - The insanity begins.', users: 57, category: 'General', pinned: true },
+    { name: '#chat', topic: 'Everyone is welcome here', users: 20, category: 'General', pinned: true },
+    { name: '#help', topic: 'Welcome to #help @ PureIRC -- Please state what you need help with.', users: 12, category: 'Support', pinned: true },
+    { name: '#dennis', topic: '', users: 20, category: 'General', pinned: false },
+    { name: '#irpg', topic: 'https://idlerpg.net/ - PureIRC\'s IDLERPG channel', users: 20, category: 'Gaming', pinned: false },
+    { name: '#canada', topic: 'Welcome to #Canada - the 51st state!', users: 15, category: 'General', pinned: false },
+    { name: '#pureirc.us', topic: 'Official Channel for the irc.PureIRC.us PureIRC client servers', users: 15, category: 'Network', pinned: false },
+    { name: '#routing', topic: 'Got link? Look here for Region info', users: 14, category: 'Network', pinned: false },
+    { name: '#1up', topic: '', users: 12, category: 'General', pinned: false }
   ];
 }
 
@@ -524,7 +524,7 @@ function showBuffer(ch) {
 }
 
 function openIrcModal(channel) {
-  channel = channel || '#lobby';
+  channel = channel || '#PureIRC';
   if (!channel.startsWith('#')) channel = '#' + channel;
   currentIrcChannel = channel;
 

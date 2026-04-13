@@ -20,7 +20,7 @@ class IRCModal {
     this.switchInput = document.getElementById('irc-switch-input');
     this.channelBarPills = document.getElementById('irc-channel-bar-pills');
 
-    this.currentChannel = '#lobby';
+    this.currentChannel = '#PureIRC';
     this.connected = false;
     this.channels = [];
 
@@ -143,7 +143,7 @@ class IRCModal {
   /**
    * Open modal with optional channel
    */
-  open(channel = '#lobby') {
+  open(channel = '#PureIRC') {
     if (!channel.startsWith('#')) {
       channel = '#' + channel;
     }
@@ -193,7 +193,7 @@ class IRCModal {
    */
   connect() {
     let nickname = (this.nicknameInput?.value || '').trim();
-    let channel = (this.channelInput?.value || '').trim() || '#lobby';
+    let channel = (this.channelInput?.value || '').trim() || '#PureIRC';
 
     if (!channel.startsWith('#')) {
       channel = '#' + channel;

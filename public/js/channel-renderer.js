@@ -63,9 +63,9 @@ class ChannelRenderer {
     }
 
     // Get pinned channels
-    const pinnedNames = ['#lobby', '#help'];
-    const pinned = this.channels.filter(ch => pinnedNames.includes(ch.name));
-    const unpinned = this.channels.filter(ch => !pinnedNames.includes(ch.name));
+    const pinnedNames = ['#pureirc', '#chat', '#help'];
+    const pinned = this.channels.filter(ch => pinnedNames.includes(ch.name.toLowerCase()));
+    const unpinned = this.channels.filter(ch => !pinnedNames.includes(ch.name.toLowerCase()));
 
     // Combine: pinned first, then rest sorted by user count
     const sorted = [
@@ -91,7 +91,7 @@ class ChannelRenderer {
     const { name, users, topic } = channel;
     const category = this.categorizeChannel(name);
     const colorClass = this.categoryColors[category] || "text-gray-400 bg-white/5 border-white/10";
-    const isPinned = ['#lobby', '#help'].includes(name);
+    const isPinned = ['#pureirc', '#chat', '#help'].includes(name.toLowerCase());
 
     return `
       <div onclick="window.channelRenderer.openChannelModal('${name}')" 
@@ -123,11 +123,11 @@ class ChannelRenderer {
   categorizeChannel(name) {
     const nameLower = name.toLowerCase();
     
-    if (['#lobby', '#general', '#help', '#support'].includes(nameLower)) return 'General';
-    if (['#help', '#support', '#faq'].includes(nameLower)) return 'Support';
-    if (['#tech', '#programming', '#code', '#dev', '#linux', '#dev'].includes(nameLower)) return 'Technology';
-    if (['#gaming', '#games', '#stream'].includes(nameLower)) return 'Gaming';
-    if (['#music', '#anime', '#movies', '#offtopic'].includes(nameLower)) return 'Entertainment';
+    if (['#pureirc', '#chat', '#dennis', '#canada', '#1up', '#idle-chat'].includes(nameLower)) return 'General';
+    if (['#help'].includes(nameLower)) return 'Support';
+    if (['#routing', '#pureirc.us', '#pureirc.com', '#versailles'].includes(nameLower)) return 'Network';
+    if (['#irpg', '#gaming', '#games'].includes(nameLower)) return 'Gaming';
+    if (['#ascii', '#buzznet', '#eulenspiegal', '#godzilla'].includes(nameLower)) return 'Entertainment';
     
     return 'General';
   }

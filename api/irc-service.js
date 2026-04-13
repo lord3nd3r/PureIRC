@@ -30,16 +30,26 @@ class IRCService {
           auto_reconnect: false // we handle reconnect ourselves
         };
 
-        console.log(`[IRC] Connecting to ${config.host}:${config.port}...`);
+        this.baseNick = config.nick;
+        console.log(`[IRC] Connecting to ${config.host}:${config.port} as ${config.nick}...`);
 
         this.client = new IRCFramework.Client(config);
         let resolved = false;
+        let nickAttempt = 0;
 
         // Connection established
         this.client.on('registered', () => {
-          console.log('[IRC] Connected and registered');
+          console.log(`[IRC] Connected and registered as ${this.client.nick}`);
           this.connected = true;
           if (!resolved) { resolved = true; resolve(this); }
+        });
+
+        // Nick already in use — try alternates
+        this.client.on('nick in use', (event) => {
+          nickAttempt++;
+          const altNick = this.baseNick + (Math.floor(Math.random() * 900) + 100);
+          console.log(`[IRC] Nick "${event.nick}" in use, trying "${altNick}"...`);
+          this.client.changeNick(altNick);
         });
 
         // Error handling
