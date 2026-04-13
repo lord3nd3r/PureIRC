@@ -78,13 +78,13 @@ function getFinalConfig() {
 global.appConfig = getFinalConfig();
 console.log('[Config] Loaded with IRC host:', global.appConfig.irc.host);
 
-// ========== API ROUTES ==========
-app.use('/api', routes);
-
 // ========== CONFIG ENDPOINT ==========
 app.get('/api/config', (req, res) => {
   res.json(getFinalConfig());
 });
+
+// ========== API ROUTES ==========
+app.use('/api', routes);
 
 // ========== HEALTH CHECK ==========
 app.get('/health', (req, res) => {
