@@ -78,6 +78,7 @@ async function applyServerConfig() {
   }
 
   // Initialize theme switcher
+  console.log('[Config] Loaded config, themes:', !!cfg.themes, 'showSwitcher:', cfg.ui?.showThemeSwitcher, 'themeManager:', !!window.themeManager);
   if (cfg.ui?.showThemeSwitcher && cfg.themes && window.themeManager) {
     await window.themeManager.init({ get: (key, def) => {
       const keys = key.split('.');
@@ -99,8 +100,10 @@ function buildThemeSwitcher(themes) {
   container.innerHTML = '';
   for (const [id, theme] of Object.entries(themes)) {
     const dot = document.createElement('button');
-    dot.className = 'w-4 h-4 rounded-full border-2 border-transparent hover:scale-125 transition-all';
+    dot.className = 'w-5 h-5 rounded-full border-2 border-transparent hover:scale-125 transition-all cursor-pointer';
     dot.style.backgroundColor = theme.primary;
+    dot.style.minWidth = '20px';
+    dot.style.minHeight = '20px';
     dot.title = theme.name;
     if (window.themeManager.getTheme() === id) {
       dot.classList.remove('border-transparent');
