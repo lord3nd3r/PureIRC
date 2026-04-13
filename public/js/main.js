@@ -1408,12 +1408,15 @@ function sendIrcMessage() {
       }
       case 'help': {
         const helpLines = [
-          '<b>Channel:</b> /join /part /topic /invite /cycle',
-          '<b>Users:</b> /op /deop /voice /devoice /hop /dehop /kick /ban /unban /kickban /mode',
+          '<b>Channel:</b> /join /part /topic /invite /cycle /names',
+          '<b>Users:</b> /op /deop /voice /devoice /hop /dehop /kick /ban /unban /kickban /mode /owner /deowner /admin /deadmin',
           '<b>Services:</b> /ns /cs /ms /bs /hs /os /identify /ghost /regain',
           '<b>Chat:</b> /msg /notice /me /ctcp /query',
-          '<b>Info:</b> /whois /whowas /who /names /list /motd /version /time',
+          '<b>Info:</b> /whois /whowas /who /list /motd /version /time /ping /stats',
           '<b>Other:</b> /nick /away /back /quit /clear /raw',
+          '<b>Oper:</b> /oper /kill /kline /unkline /gline /ungline /zline /unzline /dline /undline',
+          '<b>Oper+:</b> /wallops /globops /sajoin /sapart /sanick /samode /chghost /sethost /chgident /chgname',
+          '<b>Oper++:</b> /squit /rehash /die /restart /map /links /trace /modules /userip',
         ];
         helpLines.forEach(l => appendToBuffer(currentIrcChannel, `<div class="msg-line msg-system">${l}</div>`));
         break;
@@ -1432,6 +1435,98 @@ function sendIrcMessage() {
       case 'raw':
       case 'quote':
         if (args.length > 0) ws.send(JSON.stringify({ type: 'raw', line: args.join(' ') }));
+        break;
+
+      // === IRCop commands ===
+      case 'oper':
+        if (args.length >= 2) ws.send(JSON.stringify({ type: 'raw', line: 'OPER ' + args[0] + ' ' + args[1] }));
+        break;
+      case 'kill':
+        if (args[0]) ws.send(JSON.stringify({ type: 'raw', line: 'KILL ' + args[0] + (args.length > 1 ? ' :' + args.slice(1).join(' ') : ' :Killed') }));
+        break;
+      case 'kline':
+        if (args.length > 0) ws.send(JSON.stringify({ type: 'raw', line: 'KLINE ' + args.join(' ') }));
+        break;
+      case 'unkline':
+        if (args[0]) ws.send(JSON.stringify({ type: 'raw', line: 'UNKLINE ' + args.join(' ') }));
+        break;
+      case 'gline':
+        if (args.length > 0) ws.send(JSON.stringify({ type: 'raw', line: 'GLINE ' + args.join(' ') }));
+        break;
+      case 'ungline':
+        if (args[0]) ws.send(JSON.stringify({ type: 'raw', line: 'UNGLINE ' + args.join(' ') }));
+        break;
+      case 'zline':
+        if (args.length > 0) ws.send(JSON.stringify({ type: 'raw', line: 'ZLINE ' + args.join(' ') }));
+        break;
+      case 'unzline':
+        if (args[0]) ws.send(JSON.stringify({ type: 'raw', line: 'UNZLINE ' + args.join(' ') }));
+        break;
+      case 'dline':
+        if (args.length > 0) ws.send(JSON.stringify({ type: 'raw', line: 'DLINE ' + args.join(' ') }));
+        break;
+      case 'undline':
+        if (args[0]) ws.send(JSON.stringify({ type: 'raw', line: 'UNDLINE ' + args.join(' ') }));
+        break;
+      case 'wallops':
+        if (args.length > 0) ws.send(JSON.stringify({ type: 'raw', line: 'WALLOPS :' + args.join(' ') }));
+        break;
+      case 'globops':
+        if (args.length > 0) ws.send(JSON.stringify({ type: 'raw', line: 'GLOBOPS :' + args.join(' ') }));
+        break;
+      case 'squit':
+        if (args[0]) ws.send(JSON.stringify({ type: 'raw', line: 'SQUIT ' + args[0] + (args.length > 1 ? ' :' + args.slice(1).join(' ') : '') }));
+        break;
+      case 'die':
+        ws.send(JSON.stringify({ type: 'raw', line: 'DIE' + (args.length > 0 ? ' ' + args.join(' ') : '') }));
+        break;
+      case 'restart':
+        ws.send(JSON.stringify({ type: 'raw', line: 'RESTART' + (args.length > 0 ? ' ' + args.join(' ') : '') }));
+        break;
+      case 'rehash':
+        ws.send(JSON.stringify({ type: 'raw', line: 'REHASH' + (args.length > 0 ? ' ' + args.join(' ') : '') }));
+        break;
+      case 'stats':
+        ws.send(JSON.stringify({ type: 'raw', line: 'STATS ' + (args[0] || '*') + (args[1] ? ' ' + args[1] : '') }));
+        break;
+      case 'trace':
+        ws.send(JSON.stringify({ type: 'raw', line: 'TRACE' + (args[0] ? ' ' + args[0] : '') }));
+        break;
+      case 'map':
+        ws.send(JSON.stringify({ type: 'raw', line: 'MAP' }));
+        break;
+      case 'links':
+        ws.send(JSON.stringify({ type: 'raw', line: 'LINKS' + (args.length > 0 ? ' ' + args.join(' ') : '') }));
+        break;
+      case 'sajoin':
+        if (args.length >= 2) ws.send(JSON.stringify({ type: 'raw', line: 'SAJOIN ' + args[0] + ' ' + args[1] }));
+        break;
+      case 'sapart':
+        if (args.length >= 2) ws.send(JSON.stringify({ type: 'raw', line: 'SAPART ' + args[0] + ' ' + args[1] }));
+        break;
+      case 'sanick':
+        if (args.length >= 2) ws.send(JSON.stringify({ type: 'raw', line: 'SANICK ' + args[0] + ' ' + args[1] }));
+        break;
+      case 'samode':
+        if (args.length >= 2) ws.send(JSON.stringify({ type: 'raw', line: 'SAMODE ' + args.join(' ') }));
+        break;
+      case 'chghost':
+        if (args.length >= 2) ws.send(JSON.stringify({ type: 'raw', line: 'CHGHOST ' + args[0] + ' ' + args[1] }));
+        break;
+      case 'sethost':
+        if (args[0]) ws.send(JSON.stringify({ type: 'raw', line: 'SETHOST ' + args[0] }));
+        break;
+      case 'chgident':
+        if (args.length >= 2) ws.send(JSON.stringify({ type: 'raw', line: 'CHGIDENT ' + args[0] + ' ' + args[1] }));
+        break;
+      case 'chgname':
+        if (args.length >= 2) ws.send(JSON.stringify({ type: 'raw', line: 'CHGNAME ' + args[0] + ' :' + args.slice(1).join(' ') }));
+        break;
+      case 'userip':
+        if (args[0]) ws.send(JSON.stringify({ type: 'raw', line: 'USERIP ' + args[0] }));
+        break;
+      case 'modules':
+        ws.send(JSON.stringify({ type: 'raw', line: 'MODULE' + (args[0] ? ' ' + args[0] : '') }));
         break;
 
       default:
