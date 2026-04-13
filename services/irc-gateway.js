@@ -265,6 +265,7 @@ export function attachGateway(server) {
           });
 
           ircClient.on('userlist', (event) => {
+            console.log(`[Gateway] Userlist for ${event.channel}:`, JSON.stringify(event.users.slice(0, 3)));
             send({
               type: 'userlist',
               channel: event.channel,
@@ -277,11 +278,19 @@ export function attachGateway(server) {
 
           ircClient.on('mode', (event) => {
             if (event.target && event.target.startsWith('#')) {
+              // Normalize modes: irc-framework sends { mode: "+o", param: "nick" }
+              // Frontend expects { mode: "o", adding: true, param: "nick" }
+              const modes = (event.modes || []).map(m => {
+                const raw = m.mode || '';
+                const adding = raw.startsWith('+');
+                const mode = raw.replace(/^[+-]/, '');
+                return { mode, adding, param: m.param || '' };
+              });
               send({
                 type: 'mode',
                 channel: event.target,
                 nick: event.nick || '',
-                modes: event.modes || [],
+                modes: modes,
                 time: Date.now(),
               });
             }
