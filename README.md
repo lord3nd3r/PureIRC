@@ -1,59 +1,50 @@
 # PureIRC Network Website
 
-A modern, fully-functional IRC network website with real-time channel data, dynamic user counts, and an embedded web client.
-
-![PureIRC Website](https://via.placeholder.com/1200x400?text=PureIRC+Network+Website)
+A modern IRC network website with a built-in WebSocket-to-IRC gateway, tabbed web chat client, real-time channel data, and dynamic server statistics.
 
 ## Features
 
-✨ **Live Channel Data**
+**Web IRC Client**
+- Custom WebSocket-to-IRC gateway — no third-party embed required
+- Tabbed interface with per-channel message buffers (like a real IRC client)
+- Status window for MOTD, server notices, and connection events
+- User list sidebar with op/voice prefixes and sorted display
+- `/join`, `/part`, `/nick`, `/me`, `/msg`, `/topic` commands
+- Unread tab indicators, maximize mode, and standalone `/chat` page
+- IRC formatting codes stripped automatically
+
+**Live Channel Data**
 - Real-time user count per channel
 - Dynamic channel list synced with IRC server
 - Auto-refresh every 45 seconds
 
-📊 **Server Statistics**
-- Total users online
-- Total channels count
-- Network uptime & operator count
+**Server Statistics**
+- Total users online, channel count, operator count
 - Updates every 30 seconds
 
-🎨 **Modern Dark UI**
-- Tailwind CSS dark theme
-- Responsive design (mobile, tablet, desktop)
-- Smooth animations & transitions
-- Lucide icons (local copy)
+**Modern Dark UI**
+- Tailwind CSS dark theme with responsive design
+- Lucide icons (bundled locally)
+- Smooth animations and transitions
 
-🔗 **Seamless IRC Integration**
-- Embedded KiwiIRC web client
-- One-click channel connection
-- Channel switching via modal
-- Support for #hashtag navigation
-
-🚀 **Production-Ready Backend**
-- Node.js/Express REST API
-- IRC protocol integration with caching
-- In-memory cache with 45s TTL
-- Error handling & graceful degradation
-- CORS & security headers enabled
-
-📱 **User-Friendly**
-- No registration required to browse
-- One-click connect to any channel
-- Mobile-optimized interface
-- Keyboard navigation support
+**Production-Ready Backend**
+- Node.js / Express REST API
+- IRC protocol integration with in-memory cache
+- Helmet.js security headers, CORS, gzip compression
+- WebSocket gateway with per-IP rate limiting
 
 ---
 
 ## Quick Start
 
 ### Requirements
-- Node.js 16+
-- npm 8+
+- Node.js 18+
+- npm 9+
 
 ### Installation
 ```bash
-git clone https://github.com/youruser/pureirc-network.git
-cd burnout
+git clone https://github.com/lord3nd3r/PureIRC.git
+cd PureIRC
 npm install
 cp .env.example .env
 npm start
@@ -61,72 +52,62 @@ npm start
 
 Visit: **http://localhost:3000**
 
+The web chat client is available at **http://localhost:3000/chat** (standalone) or via the "Connect" buttons on the main page (modal).
+
 ---
 
 ## Architecture
 
-### Backend
 ```
 Express Server (port 3000)
-    ├── REST API (/api/*)
-    │   ├── /api/channels — Get channel list
-    │   ├── /api/stats — Server statistics
-    │   └── /api/health — Health check
-    └── Static Files (/public)
-        ├── index.html
-        ├── js/main.js
-        └── js/lucide.min.js
-                ↓
-        [IRC Connection Layer]
-                ↓
-        IRC Server (irc.pureirc.com:6667)
+├── REST API
+│   ├── GET /api/channels — Channel list with user counts
+│   ├── GET /api/stats    — Server statistics
+│   └── GET /health       — Health check
+├── WebSocket Gateway (/ws/irc)
+│   └── Per-client WebSocket ↔ IRC connection proxy
+│       ├── Rate limiting (3 connections per IP)
+│       ├── 30s connection timeout
+│       └── IRC formatting code stripping
+├── Static Files (/public)
+│   ├── index.html      — Main site
+│   ├── chat.html       — Standalone chat page
+│   └── js/main.js      — All frontend logic
+└── IRC Connection Layer
+    └── irc.pureirc.com:6667
 ```
 
 ### Frontend
-```
-Browser
-    ├── HTML (Tailwind CSS dark theme)
-    ├── JavaScript (main.js — vanilla, no frameworks)
-    ├── Icons (Lucide — SVG)
-    └── API Client
-        ├── Auto-fetch channels every 45s
-        ├── Auto-fetch stats every 30s
-        └── Smooth DOM updates
-```
+- Vanilla JavaScript — no build step, no frameworks
+- Per-channel message buffers with tab switching
+- Status window tab for server messages
+- Maximize toggle and open-in-new-tab support
 
 ---
 
 ## File Structure
 
 ```
-burnout/
-├── server.js                  # Express entry point
-├── package.json               # Dependencies
+├── server.js                  # Express + HTTP server entry point
+├── package.json
 ├── .env.example               # Configuration template
 │
 ├── api/
-│   ├── routes.js             # Route definitions
-│   ├── irc-service.js        # IRC protocol queries
-│   ├── channel-controller.js # Channel endpoint logic
-│   └── stats-controller.js   # Stats endpoint logic
+│   ├── routes.js              # Route definitions
+│   ├── irc-service.js         # IRC protocol queries
+│   ├── channel-controller.js  # Channel endpoint logic
+│   └── stats-controller.js    # Stats endpoint logic
 │
 ├── services/
-│   └── irc-cache.js          # In-memory cache (45s TTL)
+│   ├── irc-cache.js           # In-memory cache (45s/30s TTL)
+│   └── irc-gateway.js         # WebSocket-to-IRC gateway
 │
-├── public/
-│   ├── index.html            # Main page
-│   └── js/
-│       ├── main.js           # All UI logic (single file)
-│       └── lucide.min.js     # Icon library
-│
-├── docs/
-│   ├── README.md             # This file
-│   ├── SETUP.md              # Deployment guide
-│   ├── API.md                # API reference
-│   └── ARCHITECTURE.md       # Technical details
-│
-└── db/
-    └── schema.sql            # Future: User database
+└── public/
+    ├── index.html             # Main page with embedded chat modal
+    ├── chat.html              # Standalone full-page chat client
+    └── js/
+        ├── main.js            # All UI + IRC client logic
+        └── lucide.min.js      # Icon library (local)
 ```
 
 ---
@@ -134,24 +115,28 @@ burnout/
 ## API Endpoints
 
 ### Get Channels
-```bash
+```
 GET /api/channels
 ```
-Returns: Array of channels with user counts, topics, categories
+Returns array of channels with user counts and topics.
 
 ### Get Server Stats
-```bash
+```
 GET /api/stats
 ```
-Returns: Users online, total channels, operators, uptime
+Returns users online, total channels, operators, uptime.
 
 ### Health Check
-```bash
+```
 GET /health
 ```
-Returns: Server status and uptime
+Returns server status and uptime.
 
-See [API.md](docs/API.md) for detailed documentation.
+### WebSocket Gateway
+```
+ws://localhost:3000/ws/irc
+```
+Per-client WebSocket connection that proxies to the IRC server. Supports `connect`, `join`, `part`, `message`, `action`, `nick`, and `raw` commands.
 
 ---
 
@@ -159,104 +144,61 @@ See [API.md](docs/API.md) for detailed documentation.
 
 Create `.env` from `.env.example`:
 
-```bash
+```env
+# IRC Server
+IRC_HOST=irc.pureirc.com
+IRC_PORT=6667
+IRC_SSL_PORT=6697
+IRC_USE_SSL=false
+IRC_NICK=PureBot
+IRC_USERNAME=purebot
+IRC_REALNAME=Pure IRC Bot
+
 # Server
 PORT=3000
 NODE_ENV=development
 
-# IRC Connection
-IRC_HOST=irc.pureirc.com
-IRC_PORT=6667
-IRC_USE_SSL=false
-
-# Cache (milliseconds)
-CACHE_TTL_CHANNELS=45000   # 45 seconds
-CACHE_TTL_STATS=30000      # 30 seconds
-
 # CORS
 CORS_ORIGIN=http://localhost:3000
+
+# Cache
+CACHE_TTL_SECONDS=45
 ```
 
 ---
 
 ## Development
 
-### Start Server
 ```bash
-npm start
+npm start          # Start server
+npm run dev        # Start in development mode
 ```
 
-### Test API
 ```bash
 curl http://localhost:3000/api/channels
 curl http://localhost:3000/api/stats
 curl http://localhost:3000/health
 ```
 
-### View Logs
-Server logs appear in console with `[IRC]`, `[Cache]`, `[API]` prefixes
-
-### Modify UI
-Edit `public/js/main.js` — all frontend logic is in one file for simplicity
-
-### Update Styles
-Edit Tailwind classes directly in `public/index.html` or CSS in `<style>` tag
-
----
-
-## Deployment
-
-### Systemd (Recommended for Linux VPS)
-```bash
-# See SETUP.md for complete guide
-sudo systemctl start pureirc
-sudo systemctl status pureirc
-```
-
-### Docker
-```bash
-docker-compose up -d
-docker-compose logs -f
-```
-
-### Heroku
-```bash
-heroku create pureirc-network
-git push heroku master
-```
-
-See [SETUP.md](docs/SETUP.md) for detailed deployment instructions.
-
----
-
-## Performance
-
-- **Page Load**: ~2 seconds (Tailwind CDN + JS parsing)
-- **API Response Time**: ~50-200ms (cached)
-- **Channel Update Latency**: 45 seconds (configurable)
-- **Stats Update Latency**: 30 seconds (configurable)
-- **Memory Usage**: ~50MB (Node.js + cache)
-
----
-
-## Browser Support
-
-- Chrome/Edge 90+
-- Firefox 88+
-- Safari 14+
-- Mobile browsers (iOS Safari 14+, Chrome Android)
+All frontend logic is in `public/js/main.js`. Edit Tailwind classes directly in the HTML files.
 
 ---
 
 ## Security
 
-- ✅ CORS enabled (configurable)
-- ✅ Security headers (Helmet.js)
-- ✅ Gzip compression enabled
-- ✅ No sensitive data in frontend
-- ✅ Environment variables for credentials
-- 🔜 Rate limiting (future)
-- 🔜 Input validation (future)
+- Helmet.js security headers with custom CSP
+- CORS configuration (configurable origin)
+- Gzip compression
+- WebSocket rate limiting (3 connections per IP)
+- IRC message length capped at 512 bytes
+- Input sanitization (HTML escaping)
+- No sensitive data exposed to frontend
+
+---
+
+## License
+
+MIT
 
 ---
 

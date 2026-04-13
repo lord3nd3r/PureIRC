@@ -34,24 +34,23 @@ async function startApp() {
     window.lucide.createIcons();
   }
 
-  // Load initial data
-  await loadChannels();
-  await loadStats();
-
-  // Setup UI
+  // Setup UI FIRST (so buttons work immediately)
   setupHeaderScrollEffect();
   setupMobileMenu();
   setupConnectTabs();
   setupFaqAccordion();
-  setupCopyToClipboard();
   setupNavHighlight();
   setupFooterYear();
-  setupChannelQuickPicks();
   setupIrcModal();
 
+  // Load data in background (don't block UI)
+  loadChannels().catch(e => console.warn('[Channels]', e.message));
+  loadStats().catch(e => console.warn('[Stats]', e.message));
+  setupChannelQuickPicks();
+
   // Start auto-refresh intervals
-  setInterval(loadChannels, CHANNELS_REFRESH_INTERVAL);
-  setInterval(loadStats, STATS_REFRESH_INTERVAL);
+  setInterval(() => loadChannels().catch(() => {}), CHANNELS_REFRESH_INTERVAL);
+  setInterval(() => loadStats().catch(() => {}), STATS_REFRESH_INTERVAL);
 
   console.log('[App] Initialization complete');
 }
@@ -459,8 +458,68 @@ function setupNavHighlight() {
  * IRC Modal Functions
  */
 
-let currentIrcChannel = '#lobby';
+let currentIrcChannel = '*status';  // Start on status window
 let ircConnected = false;
+let ws = null;
+let ircNickname = '';
+let channelUsers = {};
+let ircMaximized = false;
+
+// Per-channel message buffers: { normalizedName: [htmlStrings] }
+let channelBuffers = {};
+// Ordered list of open tabs (including '*status')
+let openTabs = ['*status'];
+// Unread indicators per tab
+let tabUnread = {};
+
+const MAX_BUFFER_LINES = 500;
+
+// IRC channels are case-insensitive, normalize for lookups
+function normChan(ch) { return (ch || '').toLowerCase(); }
+
+function getBuffer(ch) {
+  const key = normChan(ch);
+  if (!channelBuffers[key]) channelBuffers[key] = [];
+  return channelBuffers[key];
+}
+
+function appendToBuffer(ch, html) {
+  const buf = getBuffer(ch);
+  buf.push(html);
+  while (buf.length > MAX_BUFFER_LINES) buf.shift();
+
+  const key = normChan(ch);
+  // If this is the active tab, render it
+  if (key === normChan(currentIrcChannel)) {
+    const container = document.getElementById('irc-messages');
+    if (!container) return;
+    const atBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 60;
+    container.insertAdjacentHTML('beforeend', html);
+    if (atBottom) container.scrollTop = container.scrollHeight;
+    while (container.children.length > MAX_BUFFER_LINES) container.removeChild(container.firstChild);
+  } else {
+    // Mark tab as unread
+    tabUnread[key] = true;
+    renderTabs();
+  }
+}
+
+function appendMessage(html) {
+  // Append to current channel's buffer and render
+  appendToBuffer(currentIrcChannel, html);
+}
+
+function appendStatusMessage(html) {
+  appendToBuffer('*status', html);
+}
+
+function showBuffer(ch) {
+  const container = document.getElementById('irc-messages');
+  if (!container) return;
+  const buf = getBuffer(ch);
+  container.innerHTML = buf.join('');
+  container.scrollTop = container.scrollHeight;
+}
 
 function openIrcModal(channel) {
   channel = channel || '#lobby';
@@ -484,11 +543,9 @@ function openIrcModal(channel) {
     switchIrcChannel(channel);
   } else {
     const form = document.getElementById('irc-connect-form');
-    const container = document.getElementById('irc-frame-container');
-    const bar = document.getElementById('irc-channel-bar');
+    const container = document.getElementById('irc-chat-container');
     if (form) form.classList.remove('hidden');
     if (container) container.classList.add('hidden');
-    if (bar) bar.classList.add('hidden');
   }
 
   if (window.lucide) {
@@ -504,90 +561,527 @@ function closeIrcModal() {
   }
 }
 
-function buildKiwiUrl(nickname, channel) {
-  const channelClean = channel.startsWith('#') ? channel.substring(1) : channel;
-  let url = `https://kiwiirc.com/nextclient/irc.pureirc.com/?nick=${encodeURIComponent(nickname)}`;
-  url += `#${encodeURIComponent(channelClean)}`;
-  return url;
+function toggleIrcMaximize() {
+  const modal = document.getElementById('irc-modal');
+  const content = document.getElementById('irc-modal-content');
+  if (!modal || !content) return;
+  ircMaximized = !ircMaximized;
+  modal.classList.toggle('maximized', ircMaximized);
+  content.classList.toggle('maximized', ircMaximized);
+  if (window.lucide) window.lucide.createIcons();
 }
+
+function openIrcInNewTab() {
+  window.open('/chat', '_blank');
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+function formatTime(ts) {
+  const d = new Date(ts);
+  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+// Nick color hash
+const nickColors = [
+  '#f87171', '#fb923c', '#fbbf24', '#a3e635', '#34d399',
+  '#22d3ee', '#60a5fa', '#a78bfa', '#e879f9', '#fb7185',
+];
+function nickColor(nick) {
+  let hash = 0;
+  for (let i = 0; i < nick.length; i++) hash = ((hash << 5) - hash + nick.charCodeAt(i)) | 0;
+  return nickColors[Math.abs(hash) % nickColors.length];
+}
+
+// ========== TABS ==========
+
+function renderTabs() {
+  const bar = document.getElementById('irc-tab-bar');
+  if (!bar) return;
+  bar.innerHTML = '';
+
+  openTabs.forEach(tab => {
+    const key = normChan(tab);
+    const isActive = key === normChan(currentIrcChannel);
+    const isStatus = tab === '*status';
+    const hasUnread = tabUnread[key] && !isActive;
+    const displayName = isStatus ? 'Status' : tab;
+
+    let html = `<div class="irc-tab${isActive ? ' active' : ''}" onclick="switchTab('${escapeHtml(tab)}')" title="${escapeHtml(tab)}">`;
+    if (hasUnread) html += `<span class="tab-unread"></span>`;
+    html += `<span>${escapeHtml(displayName)}</span>`;
+    if (!isStatus) {
+      html += `<span class="tab-close" onclick="event.stopPropagation(); closeTab('${escapeHtml(tab)}')" title="Close">&times;</span>`;
+    }
+    html += `</div>`;
+    bar.insertAdjacentHTML('beforeend', html);
+  });
+}
+
+function ensureTab(ch) {
+  const key = normChan(ch);
+  if (!openTabs.find(t => normChan(t) === key)) {
+    openTabs.push(ch);
+    renderTabs();
+  }
+}
+
+function switchTab(tab) {
+  const key = normChan(tab);
+  tabUnread[key] = false;
+  currentIrcChannel = tab;
+
+  const display = document.getElementById('irc-channel-display');
+  if (display) display.textContent = tab === '*status' ? 'Status' : tab;
+
+  showBuffer(tab);
+  renderTabs();
+  renderUserList();
+
+  // Focus input
+  const input = document.getElementById('irc-input');
+  if (input) input.focus();
+}
+
+function closeTab(tab) {
+  const key = normChan(tab);
+  if (tab === '*status') return;
+
+  // Part the channel if connected
+  if (ws && ircConnected && tab.startsWith('#')) {
+    ws.send(JSON.stringify({ type: 'part', channel: tab }));
+  }
+
+  openTabs = openTabs.filter(t => normChan(t) !== key);
+  delete channelBuffers[key];
+  delete channelUsers[key];
+  delete tabUnread[key];
+
+  // If we closed the active tab, switch to the last tab
+  if (normChan(currentIrcChannel) === key) {
+    const newTab = openTabs[openTabs.length - 1] || '*status';
+    switchTab(newTab);
+  } else {
+    renderTabs();
+  }
+}
+
+// ========== CONNECTION ==========
 
 function connectIrc() {
   let nickname = document.getElementById('irc-nickname').value.trim();
   let channel = document.getElementById('irc-channel-input').value.trim() || '#lobby';
   if (!channel.startsWith('#')) channel = '#' + channel;
+  const useSSL = document.getElementById('irc-ssl')?.checked || false;
 
   if (!nickname) {
     nickname = 'PureUser' + Math.floor(Math.random() * 9999);
     document.getElementById('irc-nickname').value = nickname;
   }
 
-  if (!/^[a-zA-Z_][a-zA-Z0-9_\-]{0,15}$/.test(nickname)) {
+  if (!/^[a-zA-Z_\[\]\\`^{}|][a-zA-Z0-9_\[\]\\`^{}|\-]{0,15}$/.test(nickname)) {
     nickname = 'PureUser' + Math.floor(Math.random() * 9999);
     document.getElementById('irc-nickname').value = nickname;
   }
 
-  currentIrcChannel = channel;
-  ircConnected = true;
+  currentIrcChannel = '*status';
+  ircNickname = nickname;
+  channelUsers = {};
+  channelBuffers = {};
+  openTabs = ['*status'];
+  tabUnread = {};
 
-  const url = buildKiwiUrl(nickname, channel);
-  const frame = document.getElementById('irc-frame');
-  if (frame) frame.src = url;
+  // Store the initial channel to join after connect
+  window._ircInitialChannel = channel;
 
-  const form = document.getElementById('irc-connect-form');
-  const container = document.getElementById('irc-frame-container');
-  const bar = document.getElementById('irc-channel-bar');
-  const display = document.getElementById('irc-channel-display');
+  // Show connecting state
+  const connectBtn = document.querySelector('#irc-connect-form button[onclick="connectIrc()"]');
+  if (connectBtn) {
+    connectBtn.disabled = true;
+    connectBtn.innerHTML = '<span class="animate-pulse">Connecting...</span>';
+  }
+  const errorDiv = document.getElementById('irc-connect-error');
+  if (errorDiv) errorDiv.classList.add('hidden');
 
-  if (form) form.classList.add('hidden');
-  if (container) container.classList.remove('hidden');
-  if (bar) bar.classList.remove('hidden');
-  if (display) display.textContent = channel;
+  // Open WebSocket
+  const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  ws = new WebSocket(`${protocol}//${location.host}/ws/irc`);
 
-  renderChannelBar(channel);
+  ws.onopen = () => {
+    ws.send(JSON.stringify({
+      type: 'connect',
+      nickname: nickname,
+      ssl: useSSL,
+    }));
+  };
+
+  ws.onmessage = (event) => {
+    let data;
+    try { data = JSON.parse(event.data); } catch { return; }
+    handleIrcMessage(data);
+  };
+
+  ws.onerror = () => {
+    appendStatusMessage('<div class="msg-line msg-system">⚠ WebSocket error</div>');
+  };
+
+  ws.onclose = () => {
+    if (ircConnected) {
+      ircConnected = false;
+      appendStatusMessage('<div class="msg-line msg-system">— Disconnected from server —</div>');
+      updateConnectionStatus(false);
+    } else {
+      const errorDiv = document.getElementById('irc-connect-error');
+      if (errorDiv) {
+        errorDiv.textContent = 'Connection failed. Try unchecking SSL or try again.';
+        errorDiv.classList.remove('hidden');
+      }
+    }
+    if (connectBtn) {
+      connectBtn.disabled = false;
+      connectBtn.innerHTML = '<i data-lucide="radio" class="w-4 h-4"></i> Connect to PureIRC';
+      if (window.lucide) window.lucide.createIcons();
+    }
+    ws = null;
+  };
 }
 
-function renderChannelBar(activeChannel) {
-  const pills = document.getElementById('irc-channel-bar-pills');
-  if (!pills) return;
+// ========== MESSAGE HANDLING ==========
 
-  pills.innerHTML = '';
-  const channels = cachedChannels.length > 0 ? cachedChannels : getDefaultChannels();
+function routeMessage(data) {
+  // Determine which buffer a message belongs to
+  if (!data.target && !data.channel) return '*status';
+  const target = data.channel || data.target || '*status';
+  // If the target is our nick, it's a private message (status or query)
+  if (target === ircNickname || target === '*') return '*status';
+  return target;
+}
 
-  channels.forEach(ch => {
-    const isActive = ch.name === activeChannel;
-    pills.innerHTML += `
-      <button onclick="switchIrcChannel('${ch.name}')" class="channel-pill text-xs px-3 py-1.5 rounded-full border border-white/10 text-gray-400 font-mono whitespace-nowrap ${isActive ? 'active' : ''}">${ch.name}</button>
-    `;
+function handleIrcMessage(data) {
+  switch (data.type) {
+    case 'connected':
+      ircConnected = true;
+      ircNickname = data.nickname;
+      updateConnectionStatus(true);
+
+      // Switch UI
+      const form = document.getElementById('irc-connect-form');
+      const container = document.getElementById('irc-chat-container');
+
+      if (form) form.classList.add('hidden');
+      if (container) container.classList.remove('hidden');
+
+      const display = document.getElementById('irc-channel-display');
+      if (display) display.textContent = 'Status';
+
+      appendStatusMessage(`<div class="msg-line msg-system">— Connected to ${escapeHtml(data.server)} as ${escapeHtml(data.nickname)} —</div>`);
+      renderTabs();
+      showBuffer('*status');
+
+      // Join the initial channel
+      const initCh = window._ircInitialChannel || '#lobby';
+      ws.send(JSON.stringify({ type: 'join', channel: initCh }));
+      break;
+
+    case 'message': {
+      const dest = routeMessage(data);
+      const time = formatTime(data.time);
+      const color = nickColor(data.nick);
+      const selfClass = data.isSelf ? ' msg-self' : '';
+      let html;
+      if (data.isAction) {
+        html = `<div class="msg-line msg-action${selfClass}"><span class="text-gray-600">${time}</span> * <span class="msg-nick" style="color:${color}">${escapeHtml(data.nick)}</span> ${escapeHtml(data.message)}</div>`;
+      } else {
+        html = `<div class="msg-line${selfClass}"><span class="text-gray-600">${time}</span> <span class="msg-nick" style="color:${color}">&lt;${escapeHtml(data.nick)}&gt;</span> <span class="text-gray-300">${escapeHtml(data.message)}</span></div>`;
+      }
+      ensureTab(dest);
+      appendToBuffer(dest, html);
+      break;
+    }
+
+    case 'notice': {
+      const time = formatTime(data.time);
+      const html = `<div class="msg-line msg-notice"><span class="text-gray-600">${time}</span> -${escapeHtml(data.nick)}- ${escapeHtml(data.message)}</div>`;
+      // Route notices: channel notices go to channel, else status
+      const dest = (data.target && data.target.startsWith('#')) ? data.target : '*status';
+      appendToBuffer(dest, html);
+      break;
+    }
+
+    case 'join': {
+      const ch = data.channel;
+      const chKey = normChan(ch);
+      ensureTab(ch);
+
+      appendToBuffer(ch, `<div class="msg-line msg-join"><span class="text-gray-600">${formatTime(data.time)}</span> → ${escapeHtml(data.nick)} joined ${escapeHtml(ch)}</div>`);
+
+      if (!channelUsers[chKey]) channelUsers[chKey] = [];
+      if (!channelUsers[chKey].find(u => u.nick === data.nick)) {
+        channelUsers[chKey].push({ nick: data.nick, modes: [] });
+      }
+
+      // If it's us joining, switch to that tab
+      if (data.nick === ircNickname) {
+        switchTab(ch);
+      } else if (chKey === normChan(currentIrcChannel)) {
+        renderUserList();
+      }
+      break;
+    }
+
+    case 'part': {
+      const ch = data.channel;
+      const chKey = normChan(ch);
+      appendToBuffer(ch, `<div class="msg-line msg-part"><span class="text-gray-600">${formatTime(data.time)}</span> ← ${escapeHtml(data.nick)} left ${escapeHtml(ch)}${data.message ? ' (' + escapeHtml(data.message) + ')' : ''}</div>`);
+
+      if (channelUsers[chKey]) {
+        channelUsers[chKey] = channelUsers[chKey].filter(u => u.nick !== data.nick);
+      }
+      // If we parted, remove the tab
+      if (data.nick === ircNickname) {
+        openTabs = openTabs.filter(t => normChan(t) !== chKey);
+        delete channelUsers[chKey];
+        if (normChan(currentIrcChannel) === chKey) {
+          switchTab(openTabs[openTabs.length - 1] || '*status');
+        }
+        renderTabs();
+      } else if (chKey === normChan(currentIrcChannel)) {
+        renderUserList();
+      }
+      break;
+    }
+
+    case 'kick': {
+      const ch = data.channel;
+      const chKey = normChan(ch);
+      appendToBuffer(ch, `<div class="msg-line msg-part"><span class="text-gray-600">${formatTime(data.time)}</span> ✖ ${escapeHtml(data.nick)} was kicked by ${escapeHtml(data.by)}${data.reason ? ' (' + escapeHtml(data.reason) + ')' : ''}</div>`);
+
+      if (channelUsers[chKey]) {
+        channelUsers[chKey] = channelUsers[chKey].filter(u => u.nick !== data.nick);
+      }
+      if (data.nick === ircNickname) {
+        openTabs = openTabs.filter(t => normChan(t) !== chKey);
+        delete channelUsers[chKey];
+        if (normChan(currentIrcChannel) === chKey) {
+          switchTab(openTabs[openTabs.length - 1] || '*status');
+        }
+        renderTabs();
+      } else if (chKey === normChan(currentIrcChannel)) {
+        renderUserList();
+      }
+      break;
+    }
+
+    case 'quit': {
+      const html = `<div class="msg-line msg-quit"><span class="text-gray-600">${formatTime(data.time)}</span> ← ${escapeHtml(data.nick)} quit${data.message ? ' (' + escapeHtml(data.message) + ')' : ''}</div>`;
+      // Add quit message to all channels this user was in
+      for (const ch in channelUsers) {
+        if (channelUsers[ch].find(u => u.nick === data.nick)) {
+          channelUsers[ch] = channelUsers[ch].filter(u => u.nick !== data.nick);
+          appendToBuffer(ch, html);
+        }
+      }
+      if (channelUsers[normChan(currentIrcChannel)]) renderUserList();
+      break;
+    }
+
+    case 'nick': {
+      const html = `<div class="msg-line msg-system"><span class="text-gray-600">${formatTime(data.time)}</span> — ${escapeHtml(data.oldNick)} is now known as ${escapeHtml(data.newNick)}</div>`;
+      if (data.oldNick === ircNickname) ircNickname = data.newNick;
+      for (const ch in channelUsers) {
+        const user = channelUsers[ch].find(u => u.nick === data.oldNick);
+        if (user) {
+          user.nick = data.newNick;
+          appendToBuffer(ch, html);
+        }
+      }
+      renderUserList();
+      break;
+    }
+
+    case 'topic': {
+      const ch = data.channel || '*status';
+      appendToBuffer(ch, `<div class="msg-line msg-topic"><span class="text-gray-600">${formatTime(data.time)}</span> ◆ Topic for ${escapeHtml(data.channel)}: ${escapeHtml(data.topic)}</div>`);
+      break;
+    }
+
+    case 'userlist':
+      channelUsers[normChan(data.channel)] = data.users;
+      if (normChan(data.channel) === normChan(currentIrcChannel)) renderUserList();
+      break;
+
+    case 'motd':
+      if (data.motd) {
+        appendStatusMessage(`<div class="msg-line msg-system">— MOTD —</div>`);
+        data.motd.split('\n').forEach(line => {
+          appendStatusMessage(`<div class="msg-line msg-system">${escapeHtml(line)}</div>`);
+        });
+      }
+      break;
+
+    case 'nick_in_use':
+      ircNickname = data.newNick;
+      appendStatusMessage(`<div class="msg-line msg-notice">⚠ Nick ${escapeHtml(data.oldNick)} in use, trying ${escapeHtml(data.newNick)}</div>`);
+      break;
+
+    case 'irc_error':
+      appendStatusMessage(`<div class="msg-line msg-notice">⚠ ${escapeHtml(data.error || 'Error')}: ${escapeHtml(data.reason)}</div>`);
+      break;
+
+    case 'error':
+      appendStatusMessage(`<div class="msg-line msg-notice">⚠ ${escapeHtml(data.message)}</div>`);
+      break;
+
+    case 'disconnected':
+      ircConnected = false;
+      updateConnectionStatus(false);
+      appendStatusMessage(`<div class="msg-line msg-system">— ${escapeHtml(data.message)} —</div>`);
+      break;
+  }
+}
+
+// ========== UI RENDERING ==========
+
+function renderUserList() {
+  const listEl = document.getElementById('irc-userlist');
+  const countEl = document.getElementById('irc-user-count');
+  const panel = document.getElementById('irc-userlist-panel');
+  if (!listEl) return;
+
+  // Hide user list on status tab
+  if (currentIrcChannel === '*status') {
+    if (panel) panel.classList.add('hidden');
+    return;
+  }
+  if (panel) panel.classList.remove('hidden');
+
+  const users = channelUsers[normChan(currentIrcChannel)] || [];
+
+  users.sort((a, b) => {
+    const aOp = a.modes.includes('o'), bOp = b.modes.includes('o');
+    const aVoice = a.modes.includes('v'), bVoice = b.modes.includes('v');
+    if (aOp !== bOp) return aOp ? -1 : 1;
+    if (aVoice !== bVoice) return aVoice ? -1 : 1;
+    return a.nick.toLowerCase().localeCompare(b.nick.toLowerCase());
   });
+
+  listEl.innerHTML = users.map(u => {
+    let prefix = '';
+    if (u.modes.includes('o')) prefix = '@';
+    else if (u.modes.includes('v')) prefix = '+';
+    return `<div class="user-item">${prefix ? '<span class="user-prefix">' + prefix + '</span>' : ''}${escapeHtml(u.nick)}</div>`;
+  }).join('');
+
+  if (countEl) countEl.textContent = users.length;
 }
+
+function updateConnectionStatus(connected) {
+  const indicator = document.getElementById('irc-status-indicator');
+  const dot = document.getElementById('irc-status-dot');
+  const text = document.getElementById('irc-status-text');
+  if (!indicator) return;
+
+  if (connected) {
+    indicator.classList.remove('hidden');
+    dot.classList.remove('bg-red-400');
+    dot.classList.add('bg-emerald-400');
+    text.textContent = 'Connected';
+  } else {
+    dot.classList.remove('bg-emerald-400');
+    dot.classList.add('bg-red-400');
+    text.textContent = 'Disconnected';
+  }
+}
+
+// ========== SENDING ==========
+
+function sendIrcMessage() {
+  const input = document.getElementById('irc-input');
+  if (!input || !ws || !ircConnected) return;
+
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+
+  if (text.startsWith('/')) {
+    const parts = text.substring(1).split(' ');
+    const cmd = parts[0].toLowerCase();
+    const args = parts.slice(1);
+
+    switch (cmd) {
+      case 'join':
+        if (args[0]) {
+          let ch = args[0];
+          if (!ch.startsWith('#')) ch = '#' + ch;
+          ws.send(JSON.stringify({ type: 'join', channel: ch }));
+        }
+        break;
+      case 'part':
+      case 'leave': {
+        const ch = args[0] || (currentIrcChannel !== '*status' ? currentIrcChannel : '');
+        if (ch) ws.send(JSON.stringify({ type: 'part', channel: ch }));
+        break;
+      }
+      case 'nick':
+        if (args[0]) ws.send(JSON.stringify({ type: 'nick', nickname: args[0] }));
+        break;
+      case 'me':
+        if (currentIrcChannel !== '*status') {
+          ws.send(JSON.stringify({ type: 'action', target: currentIrcChannel, text: args.join(' ') }));
+        }
+        break;
+      case 'msg':
+        if (args.length >= 2) {
+          ws.send(JSON.stringify({ type: 'message', target: args[0], text: args.slice(1).join(' ') }));
+        }
+        break;
+      case 'topic':
+        ws.send(JSON.stringify({ type: 'raw', line: 'TOPIC ' + (args[0] || currentIrcChannel) + (args.length > 1 ? ' :' + args.slice(1).join(' ') : '') }));
+        break;
+      default:
+        ws.send(JSON.stringify({ type: 'raw', line: text.substring(1) }));
+    }
+  } else {
+    if (currentIrcChannel === '*status') {
+      appendStatusMessage('<div class="msg-line msg-system">ℹ Cannot send messages to the status window. Use /join #channel first.</div>');
+    } else {
+      ws.send(JSON.stringify({ type: 'message', target: currentIrcChannel, text: text }));
+    }
+  }
+
+  input.focus();
+}
+
+// ========== CHANNEL SWITCHING ==========
 
 function switchIrcChannel(channel) {
-  if (!channel.startsWith('#')) channel = '#' + channel;
-  currentIrcChannel = channel;
+  if (!channel.startsWith('#') && channel !== '*status') channel = '#' + channel;
 
-  const display = document.getElementById('irc-channel-display');
-  if (display) display.textContent = channel;
+  // Ensure tab exists and join if needed
+  ensureTab(channel);
+  if (ws && ircConnected && channel.startsWith('#')) {
+    ws.send(JSON.stringify({ type: 'join', channel: channel }));
+  }
 
-  const nickname = document.getElementById('irc-nickname').value.trim() || 'PureUser' + Math.floor(Math.random() * 9999);
-  const url = buildKiwiUrl(nickname, channel);
-  const frame = document.getElementById('irc-frame');
-  if (frame) frame.src = url;
+  switchTab(channel);
+}
 
-  renderChannelBar(channel);
+function renderChannelBar() {
+  // No-op: replaced by tabs
 }
 
 function switchToChannel() {
-  let channel = document.getElementById('irc-switch-input').value.trim();
+  const input = document.getElementById('irc-switch-input');
+  if (!input) return;
+  let channel = input.value.trim();
   if (!channel) return;
   if (!channel.startsWith('#')) channel = '#' + channel;
-  document.getElementById('irc-switch-input').value = '';
+  input.value = '';
   switchIrcChannel(channel);
-}
-
-function openIrcInNewTab() {
-  const nickname = document.getElementById('irc-nickname').value.trim() || 'PureUser' + Math.floor(Math.random() * 9999);
-  const url = buildKiwiUrl(nickname, currentIrcChannel);
-  window.open(url, '_blank');
 }
 
 // Enter key in channel switch input
@@ -598,6 +1092,17 @@ document.addEventListener('DOMContentLoaded', () => {
       if (e.key === 'Enter') switchToChannel();
     });
   }
+  const chatInput = document.getElementById('irc-input');
+  if (chatInput) {
+    chatInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter') sendIrcMessage();
+    });
+  }
+  // Enter on connect form fields
+  ['irc-nickname', 'irc-channel-input'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('keydown', e => { if (e.key === 'Enter') connectIrc(); });
+  });
 });
 
 // Initialize app when DOM is ready
