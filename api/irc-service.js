@@ -9,10 +9,12 @@ class IRCService {
     this.connected = false;
     this.channels = [];
     this.serverInfo = {};
+    this.reconnectTimer = null;
+    this.onReconnect = null; // callback for cache to know when we reconnect
   }
 
   /**
-   * Connect to IRC server
+   * Connect to IRC server (persistent — auto-reconnects)
    */
   async connect() {
     return new Promise((resolve, reject) => {
@@ -24,43 +26,47 @@ class IRCService {
           username: process.env.IRC_USERNAME || 'purebot',
           realname: process.env.IRC_REALNAME || 'Pure IRC Bot',
           tls: process.env.IRC_USE_SSL === 'true',
-          version: 'PureBot v1.0'
+          version: 'PureBot v1.0',
+          auto_reconnect: false // we handle reconnect ourselves
         };
 
         console.log(`[IRC] Connecting to ${config.host}:${config.port}...`);
 
         this.client = new IRCFramework.Client(config);
+        let resolved = false;
 
         // Connection established
         this.client.on('registered', () => {
           console.log('[IRC] Connected and registered');
           this.connected = true;
-          resolve(this);
+          if (!resolved) { resolved = true; resolve(this); }
         });
 
         // Error handling
         this.client.on('error', (error) => {
           console.error('[IRC] Error:', error);
-          this.connected = false;
-          reject(new Error(`IRC connection error: ${error}`));
         });
 
-        // Connection lost
+        // Connection lost — auto-reconnect
         this.client.on('socket close', () => {
-          console.log('[IRC] Socket closed');
+          if (this.connected) {
+            console.log('[IRC] Connection lost, reconnecting in 15s...');
+          }
           this.connected = false;
+          this._scheduleReconnect();
         });
 
         // Connect
         this.client.connect();
 
-        // Setup timeout
+        // Setup timeout for initial connect only
         setTimeout(() => {
-          if (!this.connected) {
+          if (!resolved) {
+            resolved = true;
             this.disconnect();
             reject(new Error('IRC connection timeout'));
           }
-        }, 10000);
+        }, 15000);
       } catch (err) {
         reject(err);
       }
@@ -68,9 +74,31 @@ class IRCService {
   }
 
   /**
+   * Schedule a reconnect attempt
+   */
+  _scheduleReconnect() {
+    if (this.reconnectTimer) return;
+    this.reconnectTimer = setTimeout(async () => {
+      this.reconnectTimer = null;
+      try {
+        await this.connect();
+        console.log('[IRC] Reconnected successfully');
+        if (this.onReconnect) this.onReconnect();
+      } catch (err) {
+        console.error('[IRC] Reconnect failed:', err.message);
+        // will retry via socket close handler
+      }
+    }, 15000);
+  }
+
+  /**
    * Disconnect from IRC server
    */
   disconnect() {
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
     if (this.client) {
       this.client.quit('Goodbye');
       this.connected = false;

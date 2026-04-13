@@ -9,18 +9,27 @@ class IRCCache {
       channels: {
         data: null,
         timestamp: null,
-        ttl: parseInt(process.env.CACHE_TTL_SECONDS || 45) * 1000
+        ttl: 5 * 60 * 1000 // 5 minutes
       },
       stats: {
         data: null,
         timestamp: null,
-        ttl: parseInt(process.env.CACHE_TTL_SECONDS || 45) * 1000
+        ttl: 5 * 60 * 1000 // 5 minutes
       }
     };
 
     this.ircService = new IRCService();
     this.connected = false;
     this.refreshInterval = null;
+
+    // When the bot reconnects, refresh data immediately
+    this.ircService.onReconnect = () => {
+      this.connected = true;
+      console.log('[Cache] Bot reconnected, refreshing data...');
+      this.refreshChannels().catch(() => {});
+      this.refreshStats().catch(() => {});
+    };
+
     this.init();
   }
 
@@ -51,8 +60,8 @@ class IRCCache {
    * Start periodic cache refresh
    */
   startPeriodicRefresh() {
-    // Refresh every TTL seconds
-    const refreshInterval = parseInt(process.env.CACHE_TTL_SECONDS || 45);
+    // Refresh every 5 minutes
+    const REFRESH_MS = 5 * 60 * 1000;
 
     this.refreshInterval = setInterval(async () => {
       if (!this.connected) {
@@ -67,7 +76,7 @@ class IRCCache {
       } catch (err) {
         console.error('[Cache] Refresh error:', err.message);
       }
-    }, refreshInterval * 1000);
+    }, REFRESH_MS);
   }
 
   /**
