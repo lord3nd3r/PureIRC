@@ -1055,7 +1055,6 @@ function handleIrcMessage(data) {
     case 'mode': {
       const chKey = normChan(data.channel);
       const users = channelUsers[chKey] || [];
-      console.log('[Mode] channel:', data.channel, 'users in list:', users.length, 'modes:', JSON.stringify(data.modes));
       if (data.modes && Array.isArray(data.modes)) {
         // Build readable mode string like "+ao Nick Nick"
         let adding = null;
@@ -1070,7 +1069,6 @@ function handleIrcMessage(data) {
           if (m.param) params.push(m.param);
           // Update internal user state
           const user = users.find(u => u.nick === m.param);
-          console.log('[Mode] Updating', m.param, 'found:', !!user, 'adding:', m.adding, 'mode:', m.mode);
           if (!user) continue;
           if (m.adding) {
             if (!user.modes.includes(m.mode)) user.modes.push(m.mode);
@@ -1082,10 +1080,7 @@ function handleIrcMessage(data) {
         const who = data.nick ? escapeHtml(data.nick) : 'server';
         appendToBuffer(data.channel, `<div class="msg-line msg-system"><span class="text-gray-600">${formatTime(data.time)}</span> ★ ${who} sets mode ${escapeHtml(modeDisplay)}</div>`);
       }
-      if (chKey === normChan(currentIrcChannel)) {
-        console.log('[Mode] After update, channelUsers:', JSON.stringify(channelUsers[chKey]?.map(u => u.nick + ':' + u.modes.join(','))));
-        renderUserList();
-      }
+      if (chKey === normChan(currentIrcChannel)) renderUserList();
       break;
     }
 
@@ -1203,6 +1198,7 @@ function sendIrcMessage() {
 
     switch (cmd) {
       case 'join':
+      case 'j':
         if (args[0]) {
           let ch = args[0];
           if (!ch.startsWith('#')) ch = '#' + ch;
@@ -1210,7 +1206,8 @@ function sendIrcMessage() {
         }
         break;
       case 'part':
-      case 'leave': {
+      case 'leave':
+      case 'p': {
         const ch = args[0] || (currentIrcChannel !== '*status' ? currentIrcChannel : '');
         if (ch) ws.send(JSON.stringify({ type: 'part', channel: ch }));
         break;
@@ -1219,19 +1216,226 @@ function sendIrcMessage() {
         if (args[0]) ws.send(JSON.stringify({ type: 'nick', nickname: args[0] }));
         break;
       case 'me':
+      case 'action':
         if (currentIrcChannel !== '*status') {
           ws.send(JSON.stringify({ type: 'action', target: currentIrcChannel, text: args.join(' ') }));
         }
         break;
       case 'msg':
+      case 'privmsg':
+      case 'query':
         if (args.length >= 2) {
           ws.send(JSON.stringify({ type: 'message', target: args[0], text: args.slice(1).join(' ') }));
         }
         break;
-      case 'topic':
-        ws.send(JSON.stringify({ type: 'raw', line: 'TOPIC ' + (args[0] || currentIrcChannel) + (args.length > 1 ? ' :' + args.slice(1).join(' ') : '') }));
+      case 'notice':
+        if (args.length >= 2) {
+          ws.send(JSON.stringify({ type: 'raw', line: 'NOTICE ' + args[0] + ' :' + args.slice(1).join(' ') }));
+        }
         break;
+      case 'topic':
+        if (args.length > 0 && args[0].startsWith('#')) {
+          ws.send(JSON.stringify({ type: 'raw', line: 'TOPIC ' + args[0] + (args.length > 1 ? ' :' + args.slice(1).join(' ') : '') }));
+        } else if (args.length > 0) {
+          ws.send(JSON.stringify({ type: 'raw', line: 'TOPIC ' + (currentIrcChannel !== '*status' ? currentIrcChannel : '') + ' :' + args.join(' ') }));
+        } else {
+          ws.send(JSON.stringify({ type: 'raw', line: 'TOPIC ' + (currentIrcChannel !== '*status' ? currentIrcChannel : '') }));
+        }
+        break;
+
+      // === Operator / Channel management ===
+      case 'op':
+        if (args[0]) ws.send(JSON.stringify({ type: 'raw', line: 'MODE ' + currentIrcChannel + ' +o ' + args[0] }));
+        break;
+      case 'deop':
+        if (args[0]) ws.send(JSON.stringify({ type: 'raw', line: 'MODE ' + currentIrcChannel + ' -o ' + args[0] }));
+        break;
+      case 'voice':
+        if (args[0]) ws.send(JSON.stringify({ type: 'raw', line: 'MODE ' + currentIrcChannel + ' +v ' + args[0] }));
+        break;
+      case 'devoice':
+        if (args[0]) ws.send(JSON.stringify({ type: 'raw', line: 'MODE ' + currentIrcChannel + ' -v ' + args[0] }));
+        break;
+      case 'hop':
+      case 'halfop':
+        if (args[0]) ws.send(JSON.stringify({ type: 'raw', line: 'MODE ' + currentIrcChannel + ' +h ' + args[0] }));
+        break;
+      case 'dehop':
+      case 'dehalfop':
+        if (args[0]) ws.send(JSON.stringify({ type: 'raw', line: 'MODE ' + currentIrcChannel + ' -h ' + args[0] }));
+        break;
+      case 'protect':
+      case 'admin':
+        if (args[0]) ws.send(JSON.stringify({ type: 'raw', line: 'MODE ' + currentIrcChannel + ' +a ' + args[0] }));
+        break;
+      case 'deprotect':
+      case 'deadmin':
+        if (args[0]) ws.send(JSON.stringify({ type: 'raw', line: 'MODE ' + currentIrcChannel + ' -a ' + args[0] }));
+        break;
+      case 'owner':
+        if (args[0]) ws.send(JSON.stringify({ type: 'raw', line: 'MODE ' + currentIrcChannel + ' +q ' + args[0] }));
+        break;
+      case 'deowner':
+        if (args[0]) ws.send(JSON.stringify({ type: 'raw', line: 'MODE ' + currentIrcChannel + ' -q ' + args[0] }));
+        break;
+      case 'kick':
+      case 'k':
+        if (args[0]) {
+          const reason = args.length > 1 ? args.slice(1).join(' ') : '';
+          ws.send(JSON.stringify({ type: 'raw', line: 'KICK ' + currentIrcChannel + ' ' + args[0] + (reason ? ' :' + reason : '') }));
+        }
+        break;
+      case 'ban':
+        if (args[0]) ws.send(JSON.stringify({ type: 'raw', line: 'MODE ' + currentIrcChannel + ' +b ' + args[0] }));
+        break;
+      case 'unban':
+        if (args[0]) ws.send(JSON.stringify({ type: 'raw', line: 'MODE ' + currentIrcChannel + ' -b ' + args[0] }));
+        break;
+      case 'kickban':
+      case 'kb':
+        if (args[0]) {
+          const reason = args.length > 1 ? args.slice(1).join(' ') : '';
+          ws.send(JSON.stringify({ type: 'raw', line: 'MODE ' + currentIrcChannel + ' +b ' + args[0] }));
+          ws.send(JSON.stringify({ type: 'raw', line: 'KICK ' + currentIrcChannel + ' ' + args[0] + (reason ? ' :' + reason : '') }));
+        }
+        break;
+      case 'mode':
+        if (args.length > 0) {
+          const target = args[0].startsWith('#') ? args[0] : currentIrcChannel;
+          const modeArgs = args[0].startsWith('#') ? args.slice(1).join(' ') : args.join(' ');
+          ws.send(JSON.stringify({ type: 'raw', line: 'MODE ' + target + ' ' + modeArgs }));
+        }
+        break;
+      case 'invite':
+        if (args[0]) {
+          const ch = args[1] || (currentIrcChannel !== '*status' ? currentIrcChannel : '');
+          if (ch) ws.send(JSON.stringify({ type: 'raw', line: 'INVITE ' + args[0] + ' ' + ch }));
+        }
+        break;
+
+      // === Services shortcuts ===
+      case 'ns':
+      case 'nickserv':
+        if (args.length > 0) ws.send(JSON.stringify({ type: 'raw', line: 'PRIVMSG NickServ :' + args.join(' ') }));
+        break;
+      case 'cs':
+      case 'chanserv':
+        if (args.length > 0) ws.send(JSON.stringify({ type: 'raw', line: 'PRIVMSG ChanServ :' + args.join(' ') }));
+        break;
+      case 'ms':
+      case 'memoserv':
+        if (args.length > 0) ws.send(JSON.stringify({ type: 'raw', line: 'PRIVMSG MemoServ :' + args.join(' ') }));
+        break;
+      case 'bs':
+      case 'botserv':
+        if (args.length > 0) ws.send(JSON.stringify({ type: 'raw', line: 'PRIVMSG BotServ :' + args.join(' ') }));
+        break;
+      case 'hs':
+      case 'hostserv':
+        if (args.length > 0) ws.send(JSON.stringify({ type: 'raw', line: 'PRIVMSG HostServ :' + args.join(' ') }));
+        break;
+      case 'os':
+      case 'operserv':
+        if (args.length > 0) ws.send(JSON.stringify({ type: 'raw', line: 'PRIVMSG OperServ :' + args.join(' ') }));
+        break;
+      case 'identify':
+      case 'id':
+        if (args.length > 0) ws.send(JSON.stringify({ type: 'raw', line: 'PRIVMSG NickServ :IDENTIFY ' + args.join(' ') }));
+        break;
+      case 'ghost':
+        if (args[0]) ws.send(JSON.stringify({ type: 'raw', line: 'PRIVMSG NickServ :GHOST ' + args.join(' ') }));
+        break;
+      case 'regain':
+      case 'recover':
+        if (args[0]) ws.send(JSON.stringify({ type: 'raw', line: 'PRIVMSG NickServ :REGAIN ' + args.join(' ') }));
+        break;
+
+      // === Info / queries ===
+      case 'whois':
+      case 'wi':
+        if (args[0]) ws.send(JSON.stringify({ type: 'raw', line: 'WHOIS ' + args[0] }));
+        break;
+      case 'whowas':
+        if (args[0]) ws.send(JSON.stringify({ type: 'raw', line: 'WHOWAS ' + args[0] }));
+        break;
+      case 'who':
+        ws.send(JSON.stringify({ type: 'raw', line: 'WHO ' + (args[0] || currentIrcChannel) }));
+        break;
+      case 'list':
+        ws.send(JSON.stringify({ type: 'raw', line: 'LIST' + (args.length > 0 ? ' ' + args.join(' ') : '') }));
+        break;
+      case 'names':
+        ws.send(JSON.stringify({ type: 'raw', line: 'NAMES ' + (args[0] || currentIrcChannel) }));
+        break;
+      case 'motd':
+        ws.send(JSON.stringify({ type: 'raw', line: 'MOTD' + (args[0] ? ' ' + args[0] : '') }));
+        break;
+      case 'version':
+        ws.send(JSON.stringify({ type: 'raw', line: 'VERSION' + (args[0] ? ' ' + args[0] : '') }));
+        break;
+      case 'time':
+        ws.send(JSON.stringify({ type: 'raw', line: 'TIME' + (args[0] ? ' ' + args[0] : '') }));
+        break;
+      case 'ping':
+        ws.send(JSON.stringify({ type: 'raw', line: 'PING ' + (args[0] || ':webchat') }));
+        break;
+      case 'ctcp':
+        if (args.length >= 2) {
+          ws.send(JSON.stringify({ type: 'raw', line: 'PRIVMSG ' + args[0] + ' :\x01' + args.slice(1).join(' ').toUpperCase() + '\x01' }));
+        }
+        break;
+
+      // === Connection ===
+      case 'quit':
+      case 'disconnect':
+        ws.send(JSON.stringify({ type: 'raw', line: 'QUIT :' + (args.join(' ') || 'Leaving') }));
+        break;
+      case 'away':
+        ws.send(JSON.stringify({ type: 'raw', line: 'AWAY' + (args.length > 0 ? ' :' + args.join(' ') : '') }));
+        break;
+      case 'back':
+        ws.send(JSON.stringify({ type: 'raw', line: 'AWAY' }));
+        break;
+
+      // === UI helpers ===
+      case 'clear':
+      case 'cls': {
+        const key = normChan(currentIrcChannel);
+        if (channelBuffers[key]) channelBuffers[key] = [];
+        const container = document.getElementById('irc-messages');
+        if (container) container.innerHTML = '';
+        break;
+      }
+      case 'help': {
+        const helpLines = [
+          '<b>Channel:</b> /join /part /topic /invite /cycle',
+          '<b>Users:</b> /op /deop /voice /devoice /hop /dehop /kick /ban /unban /kickban /mode',
+          '<b>Services:</b> /ns /cs /ms /bs /hs /os /identify /ghost /regain',
+          '<b>Chat:</b> /msg /notice /me /ctcp /query',
+          '<b>Info:</b> /whois /whowas /who /names /list /motd /version /time',
+          '<b>Other:</b> /nick /away /back /quit /clear /raw',
+        ];
+        helpLines.forEach(l => appendToBuffer(currentIrcChannel, `<div class="msg-line msg-system">${l}</div>`));
+        break;
+      }
+
+      // === Convenience ===
+      case 'cycle':
+      case 'rejoin': {
+        const ch = args[0] || (currentIrcChannel !== '*status' ? currentIrcChannel : '');
+        if (ch) {
+          ws.send(JSON.stringify({ type: 'part', channel: ch }));
+          setTimeout(() => ws.send(JSON.stringify({ type: 'join', channel: ch })), 500);
+        }
+        break;
+      }
+      case 'raw':
+      case 'quote':
+        if (args.length > 0) ws.send(JSON.stringify({ type: 'raw', line: args.join(' ') }));
+        break;
+
       default:
+        // Send as raw IRC command
         ws.send(JSON.stringify({ type: 'raw', line: text.substring(1) }));
     }
   } else {
