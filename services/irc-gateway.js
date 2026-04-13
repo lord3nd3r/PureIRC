@@ -4,6 +4,7 @@ import { Client as IrcClient } from 'irc-framework';
 const IRC_HOST = process.env.IRC_HOST || 'irc.pureirc.com';
 const IRC_PORT = parseInt(process.env.IRC_PORT, 10) || 6667;
 const IRC_SSL_PORT = parseInt(process.env.IRC_SSL_PORT, 10) || 6697;
+const WEBIRC_PASSWORD = process.env.WEBIRC_PASSWORD || '';
 const MAX_CONNECTIONS_PER_IP = 3;
 const CONNECTION_TIMEOUT = 30000;
 const MAX_MESSAGE_LENGTH = 512;
@@ -93,7 +94,7 @@ export function attachGateway(server) {
             }
           }, CONNECTION_TIMEOUT);
 
-          ircClient.connect({
+          const connectOpts = {
             host: IRC_HOST,
             port: port,
             nick: nickname,
@@ -102,7 +103,19 @@ export function attachGateway(server) {
             tls: useSSL,
             rejectUnauthorized: false,
             auto_reconnect: false,
-          });
+          };
+
+          // WEBIRC: pass the real client IP to the IRC server
+          if (WEBIRC_PASSWORD) {
+            connectOpts.webirc = {
+              password: WEBIRC_PASSWORD,
+              username: 'webchat',
+              hostname: ip,
+              address: ip,
+            };
+          }
+
+          ircClient.connect(connectOpts);
 
           ircClient.on('error', (err) => {
             console.log(`[Gateway] IRC client error:`, err.message || err);
