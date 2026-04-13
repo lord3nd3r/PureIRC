@@ -801,12 +801,12 @@ function connectIrc() {
   const nsPassword = document.getElementById('irc-password')?.value.trim() || '';
 
   if (!nickname) {
-    nickname = 'PureUser' + Math.floor(Math.random() * 9999);
+    nickname = (window.SITE_CONFIG?.userPrefix || 'User') + Math.floor(Math.random() * 9999);
     document.getElementById('irc-nickname').value = nickname;
   }
 
   if (!/^[a-zA-Z_\[\]\\`^{}|][a-zA-Z0-9_\[\]\\`^{}|\-]{0,15}$/.test(nickname)) {
-    nickname = 'PureUser' + Math.floor(Math.random() * 9999);
+    nickname = (window.SITE_CONFIG?.userPrefix || 'User') + Math.floor(Math.random() * 9999);
     document.getElementById('irc-nickname').value = nickname;
   }
 

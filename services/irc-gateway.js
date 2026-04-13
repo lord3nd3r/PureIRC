@@ -95,7 +95,9 @@ export function attachGateway(server) {
 
           let nickname = String(msg.nickname || '').trim();
           if (!nickname || !/^[a-zA-Z_\[\]\\`^{}|][a-zA-Z0-9_\[\]\\`^{}|\-]{0,15}$/.test(nickname)) {
-            nickname = 'PureUser' + Math.floor(Math.random() * 9999);
+            const CONFIG = getIrcConfig();
+            const prefix = CONFIG.userPrefix || 'User';
+            nickname = prefix + Math.floor(Math.random() * 9999);
           }
           const useSSL = Boolean(msg.ssl);
           const CONFIG = getIrcConfig();

@@ -365,7 +365,7 @@
         <div class="text-center">
           <div class="inline-flex items-center gap-2 text-sm text-gray-500">
             <i data-lucide="terminal" class="w-4 h-4"></i>
-            <span>Use <code class="text-cyan-400 font-mono text-xs bg-cyan-500/10 px-1.5 py-0.5 rounded">/list</code> after connecting to browse all 280+ channels</span>
+            <span>Use <code class="text-cyan-400 font-mono text-xs bg-cyan-500/10 px-1.5 py-0.5 rounded">/list</code> after connecting to browse all {{MAX_CHANNELS}}+ channels</span>
           </div>
         </div>
       </div>
@@ -458,9 +458,9 @@
             <div class="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center mb-4">
               <i data-lucide="message-circle" class="w-5 h-5 text-cyan-400"></i>
             </div>
-            <h3 class="text-base font-bold text-white mb-2">#help Channel</h3>
-            <p class="text-sm text-gray-400 leading-relaxed flex-1 mb-5">Join #help on the network for real-time community support from experienced users and operators.</p>
-            <a href="javascript:void(0)" onclick="openIrcModal('#help')" class="inline-flex items-center text-sm font-semibold text-cyan-400 hover:text-cyan-300 transition-colors">Join #help →</a>
+            <h3 class="text-base font-bold text-white mb-2">{{SUPPORT_CHANNEL}} Channel</h3>
+            <p class="text-sm text-gray-400 leading-relaxed flex-1 mb-5">Join {{SUPPORT_CHANNEL}} on the network for real-time community support from experienced users and operators.</p>
+            <a href="javascript:void(0)" onclick="openIrcModal('{{SUPPORT_CHANNEL}}')" class="inline-flex items-center text-sm font-semibold text-cyan-400 hover:text-cyan-300 transition-colors">Join {{SUPPORT_CHANNEL}} →</a>
           </div>
           <div class="bg-gray-900 rounded-2xl border border-white/5 p-7 flex flex-col">
             <div class="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center mb-4">
@@ -629,7 +629,7 @@
             </div>
             <span class="text-white font-bold text-lg tracking-tight">{{SITE_NAME}}</span>
           </a>
-          <p class="text-sm text-gray-500 leading-relaxed mb-5 max-w-xs">A free, open, and community-driven IRC network. Connecting people since 2003.</p>
+          <p class="text-sm text-gray-500 leading-relaxed mb-5 max-w-xs">{{FOOTER_DESCRIPTION}}</p>
           <div class="flex items-center gap-3">
             <a href="#" class="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 border border-white/5 flex items-center justify-center text-gray-500 hover:text-white transition-colors">
               <i data-lucide="twitter" class="w-3.5 h-3.5"></i>
@@ -654,7 +654,7 @@
             <li><a href="#rules" class="text-sm text-gray-400 hover:text-white transition-colors">Rules &amp; Guidelines</a></li>
             <li><a href="#support" class="text-sm text-gray-400 hover:text-white transition-colors">Help &amp; Support</a></li>
             <li><a href="javascript:void(0)" onclick="openIrcModal('{{DEFAULT_CHANNEL}}')" class="text-sm text-gray-400 hover:text-white transition-colors">{{DEFAULT_CHANNEL}}</a></li>
-            <li><a href="javascript:void(0)" onclick="openIrcModal('#help')" class="text-sm text-gray-400 hover:text-white transition-colors">#help</a></li>
+            <li><a href="javascript:void(0)" onclick="openIrcModal('{{SUPPORT_CHANNEL}}')" class="text-sm text-gray-400 hover:text-white transition-colors">{{SUPPORT_CHANNEL}}</a></li>
           </ul>
         </div>
         <div>
@@ -668,7 +668,7 @@
         </div>
       </div>
       <div class="border-t border-white/5 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-        <p class="text-xs text-gray-600">&copy; <span id="footer-year"></span> {{SITE_NAME}} Network. All rights reserved.</p>
+        <p class="text-xs text-gray-600">&copy; {{FOUNDED_YEAR}} {{SITE_NAME}} Network. All rights reserved.</p>
         <div class="flex items-center gap-1.5">
           <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
           <span class="text-xs text-gray-600">All servers operational</span>
@@ -687,6 +687,10 @@
       siteName: '{{SITE_NAME}}',
       domain: '{{SITE_DOMAIN}}',
       defaultChannel: '{{DEFAULT_CHANNEL}}',
+      supportChannel: '{{SUPPORT_CHANNEL}}',
+      foundedYear: '{{FOUNDED_YEAR}}',
+      userPrefix: '{{USER_PREFIX}}',
+      maxChannels: '{{MAX_CHANNELS}}',
       ircHost: '{{IRC_HOST}}',
       ircPort: '{{IRC_PORT}}',
       ircPortSSL: '{{IRC_PORT_SSL}}'

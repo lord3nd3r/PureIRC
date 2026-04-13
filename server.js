@@ -109,20 +109,31 @@ function renderTemplate(filePath, res) {
   const domain = config.site?.domain || 'pureirc.com';
   const description = config.site?.description || '';
   const tagline = config.site?.tagline || 'The Internet\nRelay Chat Network';
+  const footerDescription = config.site?.footerDescription || '';
+  const foundedYear = String(config.site?.foundedYear || new Date().getFullYear());
   const defaultChannel = config.irc?.defaultChannel || '#help';
+  const supportChannel = config.social?.supportChannel || '#help';
+  const userPrefix = config.irc?.userPrefix || 'User';
   const ircHost = config.irc?.host || 'irc.pureirc.com';
   const ircPort = String(config.irc?.port || 6667);
   const ircPortSSL = String(config.irc?.portSSL || 6697);
+
+  const maxChannels = String(config.irc?.maxChannels || 280);
 
   let html = fs.readFileSync(filePath, 'utf8');
   html = html.replace(/\{\{SITE_NAME\}\}/g, siteName);
   html = html.replace(/\{\{SITE_DOMAIN\}\}/g, domain);
   html = html.replace(/\{\{SITE_DESCRIPTION\}\}/g, description);
   html = html.replace(/\{\{SITE_TAGLINE\}\}/g, tagline);
+  html = html.replace(/\{\{FOOTER_DESCRIPTION\}\}/g, footerDescription);
+  html = html.replace(/\{\{FOUNDED_YEAR\}\}/g, foundedYear);
   html = html.replace(/\{\{DEFAULT_CHANNEL\}\}/g, defaultChannel);
+  html = html.replace(/\{\{SUPPORT_CHANNEL\}\}/g, supportChannel);
+  html = html.replace(/\{\{USER_PREFIX\}\}/g, userPrefix);
   html = html.replace(/\{\{IRC_HOST\}\}/g, ircHost);
   html = html.replace(/\{\{IRC_PORT\}\}/g, ircPort);
   html = html.replace(/\{\{IRC_PORT_SSL\}\}/g, ircPortSSL);
+  html = html.replace(/\{\{MAX_CHANNELS\}\}/g, maxChannels);
 
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
