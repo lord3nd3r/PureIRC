@@ -42,6 +42,7 @@ async function startApp() {
   setupNavHighlight();
   setupFooterYear();
   setupIrcModal();
+  setupThemeDropdown();
 
   // Apply config from server
   applyServerConfig().catch(e => console.warn('[Config]', e.message));
@@ -451,6 +452,42 @@ function pickChannel(name) {
   document.querySelectorAll('#channel-quick-picks .channel-pill').forEach(p => {
     p.classList.toggle('active', p.textContent.trim() === name);
   });
+}
+
+/**
+ * Setup theme dropdown menu
+ */
+function setupThemeDropdown() {
+  const btn = document.getElementById('theme-menu-btn');
+  const dropdown = document.getElementById('theme-dropdown');
+  if (!btn || !dropdown) return;
+
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    dropdown.classList.toggle('hidden');
+  });
+
+  document.addEventListener('click', () => {
+    dropdown.classList.add('hidden');
+  });
+
+  dropdown.addEventListener('click', (e) => {
+    e.stopPropagation();
+  });
+
+  // Initialize themeManager with config from API
+  applyServerConfig().then(() => {}).catch(() => {});
+}
+
+/**
+ * Select a theme from dropdown
+ */
+function selectTheme(name) {
+  if (window.themeManager) {
+    window.themeManager.setTheme(name);
+  }
+  const dropdown = document.getElementById('theme-dropdown');
+  if (dropdown) dropdown.classList.add('hidden');
 }
 
 /**
