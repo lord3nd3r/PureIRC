@@ -16,6 +16,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     applyConfigToPage();
   }
 
+  // Initialize theme manager
+  if (window.themeManager && window.configManager) {
+    await window.themeManager.init(window.configManager);
+  }
+
   // Initialize Lucide icons
   if (window.lucide) {
     lucide.createIcons();
@@ -32,6 +37,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupCopyToClipboard();
   setupNavHighlight();
   setupFooterYear();
+  setupThemeSwitcher();
 });
 
 /**
@@ -353,6 +359,49 @@ function setupFooterYear() {
   if (yearElement) {
     yearElement.textContent = new Date().getFullYear();
   }
+}
+
+/**
+ * Setup theme switcher if enabled in config
+ */
+function setupThemeSwitcher() {
+  const cfg = window.configManager;
+  if (!cfg.get('ui.showThemeSwitcher', false)) {
+    return; // Theme switcher disabled
+  }
+
+  const themeSwitcher = document.getElementById('theme-switcher');
+  if (!themeSwitcher) return;
+
+  const themes = window.themeManager?.getAvailableThemes() || [];
+  const currentTheme = window.themeManager?.getTheme();
+
+  themeSwitcher.innerHTML = themes.map(theme => `
+    <button class="theme-option px-3 py-1.5 text-xs font-medium rounded-lg transition-all ${
+      theme.id === currentTheme 
+        ? 'bg-opacity-100 text-white' 
+        : 'bg-white/5 text-gray-400 hover:bg-white/10'
+    }" data-theme="${theme.id}" title="${theme.description}">
+      ${theme.name}
+    </button>
+  `).join('');
+
+  themeSwitcher.querySelectorAll('.theme-option').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const themeId = btn.dataset.theme;
+      window.themeManager?.setTheme(themeId);
+      
+      // Update button styles
+      themeSwitcher.querySelectorAll('.theme-option').forEach(b => {
+        b.classList.remove('bg-opacity-100', 'text-white');
+        b.classList.add('bg-white/5', 'text-gray-400');
+      });
+      btn.classList.add('bg-opacity-100', 'text-white');
+      btn.classList.remove('bg-white/5', 'text-gray-400');
+    });
+  });
+
+  console.log('[App] Theme switcher initialized');
 }
 
 // Export functions to global scope for onclick handlers

@@ -8,6 +8,12 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="/js/lucide.min.js"></script>
   <style>
+    :root {
+      --theme-primary: #06b6d4;
+      --theme-accent: #22d3ee;
+      --theme-accent-light: cyan-400;
+      --theme-accent-dark: cyan-600;
+    }
     html, body { height: 100%; margin: 0; overflow: hidden; background: #030712; }
     #irc-tab-bar { scrollbar-width: none; -ms-overflow-style: none; }
     #irc-tab-bar::-webkit-scrollbar { display: none; }
@@ -143,6 +149,8 @@
   </script>
   <!-- Configuration Manager -->
   <script src="/js/config-manager.js"></script>
+  <!-- Theme Manager -->
+  <script src="/js/theme-manager.js"></script>
   <!-- Main Application Script -->
   <script src="/js/main.js"></script>
   <script>

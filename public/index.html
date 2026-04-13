@@ -10,6 +10,12 @@
   <!-- Lucide Icons (Local) -->
   <script src="/js/lucide.min.js"></script>
   <style>
+    :root {
+      --theme-primary: #06b6d4;
+      --theme-accent: #22d3ee;
+      --theme-accent-light: cyan-400;
+      --theme-accent-dark: cyan-600;
+    }
     @keyframes pulse-dot { 50% { opacity: .5 } }
     .animate-pulse { animation: pulse-dot 2s cubic-bezier(.4,0,.6,1) infinite }
     @keyframes bounce { 0%,to { transform: translateY(-25%); animation-timing-function: cubic-bezier(.8,0,1,1) } 50% { transform: none; animation-timing-function: cubic-bezier(0,0,.2,1) } }
@@ -66,6 +72,7 @@
         <a href="#channels" class="px-4 py-2 text-sm text-gray-400 hover:text-white rounded-md hover:bg-white/5 transition-colors">Channels</a>
         <a href="#rules" class="px-4 py-2 text-sm text-gray-400 hover:text-white rounded-md hover:bg-white/5 transition-colors">Rules</a>
         <a href="#support" class="px-4 py-2 text-sm text-gray-400 hover:text-white rounded-md hover:bg-white/5 transition-colors">Support</a>
+        <div id="theme-switcher" class="ml-2 pl-2 border-l border-white/10 flex items-center gap-1"></div>
         <a href="javascript:void(0)" onclick="openIrcModal('#PureIRC')" class="ml-3 px-4 py-2 text-sm font-semibold bg-cyan-500 text-gray-950 rounded-lg hover:bg-cyan-400 transition-colors">Connect Now</a>
       </nav>
       <button id="mobile-menu-btn" class="md:hidden text-gray-400 hover:text-white transition-colors">
@@ -647,6 +654,9 @@
 
   <!-- Configuration Manager -->
   <script src="/js/config-manager.js"></script>
+  
+  <!-- Theme Manager -->
+  <script src="/js/theme-manager.js"></script>
   
   <!-- Main Application Script -->
   <script src="/js/main.js"></script>

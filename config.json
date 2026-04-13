@@ -18,19 +18,93 @@
     "userPrefix": "PureUser"
   },
   "branding": {
-    "accentColor": "cyan",
-    "primaryColor": "#06b6d4",
-    "icon": "radio"
+    "icon": "radio",
+    "defaultTheme": "cyan"
   },
   "ui": {
     "pageTitle": "PureIRC — Free IRC Network",
     "chatPageTitle": "PureIRC — Web Chat",
     "headerTitle": "PureIRC Web Client",
-    "modalTitle": "Connect to PureIRC"
+    "modalTitle": "Connect to PureIRC",
+    "showThemeSwitcher": false
   },
   "social": {
     "supportEmail": "support@pureirc.com",
     "supportChannel": "#help",
     "githubUrl": "https://github.com/pureirc/network-website"
+  },
+  "themes": {
+    "cyan": {
+      "name": "Cyan",
+      "description": "Cool cyan accent",
+      "primary": "#06b6d4",
+      "accent": "cyan",
+      "accentLight": "cyan-400",
+      "accentDark": "cyan-600",
+      "accentBg": "cyan-500/10",
+      "accentBorder": "cyan-500/20",
+      "accentGlow": "cyan-500/30",
+      "textAccent": "#22d3ee"
+    },
+    "purple": {
+      "name": "Purple",
+      "description": "Elegant purple theme",
+      "primary": "#a855f7",
+      "accent": "purple",
+      "accentLight": "purple-400",
+      "accentDark": "purple-600",
+      "accentBg": "purple-500/10",
+      "accentBorder": "purple-500/20",
+      "accentGlow": "purple-500/30",
+      "textAccent": "#d8b4fe"
+    },
+    "emerald": {
+      "name": "Emerald",
+      "description": "Fresh green theme",
+      "primary": "#10b981",
+      "accent": "emerald",
+      "accentLight": "emerald-400",
+      "accentDark": "emerald-600",
+      "accentBg": "emerald-500/10",
+      "accentBorder": "emerald-500/20",
+      "accentGlow": "emerald-500/30",
+      "textAccent": "#6ee7b7"
+    },
+    "rose": {
+      "name": "Rose",
+      "description": "Warm rose theme",
+      "primary": "#f43f5e",
+      "accent": "rose",
+      "accentLight": "rose-400",
+      "accentDark": "rose-600",
+      "accentBg": "rose-500/10",
+      "accentBorder": "rose-500/20",
+      "accentGlow": "rose-500/30",
+      "textAccent": "#fb7185"
+    },
+    "amber": {
+      "name": "Amber",
+      "description": "Warm amber theme",
+      "primary": "#f59e0b",
+      "accent": "amber",
+      "accentLight": "amber-400",
+      "accentDark": "amber-600",
+      "accentBg": "amber-500/10",
+      "accentBorder": "amber-500/20",
+      "accentGlow": "amber-500/30",
+      "textAccent": "#fcd34d"
+    },
+    "blue": {
+      "name": "Blue",
+      "description": "Classic blue theme",
+      "primary": "#3b82f6",
+      "accent": "blue",
+      "accentLight": "blue-400",
+      "accentDark": "blue-600",
+      "accentBg": "blue-500/10",
+      "accentBorder": "blue-500/20",
+      "accentGlow": "blue-500/30",
+      "textAccent": "#60a5fa"
+    }
   }
 }
