@@ -90,14 +90,14 @@ class IRCService {
       const channels = [];
       let listFinished = false;
 
-      const onList = (event) => {
-        if (event.channels) {
-          channels.push(...event.channels.map(ch => ({
-            name: ch.channel,
-            users: ch.num_users || 0,
-            topic: ch.topic || ''
-          })));
-        }
+      const onList = (list) => {
+        // irc-framework passes the channel array directly
+        const items = Array.isArray(list) ? list : (list && list.channels ? list.channels : []);
+        channels.push(...items.map(ch => ({
+          name: ch.channel,
+          users: ch.num_users || 0,
+          topic: ch.topic || ''
+        })));
       };
 
       const onListEnd = () => {
@@ -207,33 +207,32 @@ class IRCService {
         }
       };
 
-      const onServerNumeric = (event) => {
-        // Parse server numeric replies
-        if (event.command === '251') { // LUSERCLIENT
-          const match = event.params[1].match(/There are (\d+) users/);
+      const onUnknownCommand = (event) => {
+        // irc-framework emits LUSERS numerics as 'unknown command'
+        if (event.command === '251') { // LUSERCLIENT: "There are X users and Y invisible on Z servers"
+          // Global users from 266 is more accurate, but parse 251 as fallback
+          const match = event.params[1].match(/There are (\d+) users and (\d+) invisible/);
           if (match) {
-            stats.usersOnline = parseInt(match[1]);
+            stats.usersOnline = parseInt(match[1]) + parseInt(match[2]);
           }
-        } else if (event.command === '254') { // LUSERCHANNELS
-          stats.totalChannels = parseInt(event.params[1]);
-        } else if (event.command === '252') { // LUSEROP
-          stats.operators = parseInt(event.params[1]);
+        } else if (event.command === '266') { // GLOBALUSERS: params[1] is current global users
+          stats.usersOnline = parseInt(event.params[1]) || stats.usersOnline;
+        } else if (event.command === '254') { // LUSERCHANNELS: params[1] is channel count
+          stats.totalChannels = parseInt(event.params[1]) || 0;
+        } else if (event.command === '252') { // LUSEROP: params[1] is oper count
+          stats.operators = parseInt(event.params[1]) || 0;
         }
       };
 
-      this.client.on('server numeric 251', onServerNumeric);
-      this.client.on('server numeric 254', onServerNumeric);
-      this.client.on('server numeric 252', onServerNumeric);
+      this.client.on('unknown command', onUnknownCommand);
 
       // Request stats
       this.client.raw('LUSERS');
 
       setTimeout(() => {
-        this.client.removeListener('server numeric 251', onServerNumeric);
-        this.client.removeListener('server numeric 254', onServerNumeric);
-        this.client.removeListener('server numeric 252', onServerNumeric);
+        this.client.removeListener('unknown command', onUnknownCommand);
         resolve(stats);
-      }, 2000);
+      }, 3000);
     });
   }
 
