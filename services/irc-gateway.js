@@ -152,6 +152,8 @@ export function attachGateway(server) {
           });
 
           ircClient.on('message', (event) => {
+            // Skip notices and actions — they have their own handlers
+            if (event.type === 'notice' || event.type === 'action') return;
             send({
               type: 'message',
               nick: event.nick,
