@@ -134,10 +134,12 @@ const server = createServer(app);
 attachGateway(server);
 
 server.listen(PORT, () => {
+  const cfg = global.appConfig || {};
+  const ircCfg = cfg.irc || {};
   console.log(`\n🚀 PureIRC API Server`);
   console.log(`📌 Listening on http://localhost:${PORT}`);
   console.log(`🌐 Environment: ${process.env.NODE_ENV}`);
-  console.log(`📡 IRC Server: ${process.env.IRC_HOST}:${process.env.IRC_PORT}`);
+  console.log(`📡 IRC Server: ${ircCfg.host}:${ircCfg.port}`);
   console.log(`🔌 WebSocket gateway: ws://localhost:${PORT}/ws/irc\n`);
 });
 
