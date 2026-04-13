@@ -26,6 +26,13 @@ A modern IRC network website with a built-in WebSocket-to-IRC gateway, tabbed we
 - Tailwind CSS dark theme with responsive design
 - Lucide icons (bundled locally)
 - Smooth animations and transitions
+- **6 built-in themes** (Cyan, Purple, Emerald, Rose, Amber, Blue)
+- Optional theme switcher UI
+
+**Configurable Branding**
+- Centralized `config.json` for site name, IRC host, colors, and more
+- Environment variables override config values
+- Easy to adapt for different IRC networks without code changes
 
 **Production-Ready Backend**
 - Node.js / Express REST API
@@ -61,6 +68,78 @@ npm start
 ```
 
 The server starts on port 3000 by default. Visit **http://localhost:3000** to see the site, and **http://localhost:3000/chat** for the standalone IRC web client.
+
+### Configuration (config.json)
+
+The site branding, IRC host, and all UI text is configured in `config.json`. You can edit this file to customize the website for different IRC networks without modifying any code.
+
+**Key configuration options:**
+
+```json
+{
+  "site": {
+    "name": "PureIRC",                          // Site name
+    "fullName": "PureIRC Network",              // Full name for footer
+    "domain": "pureirc.com",                    // Domain
+    "description": "A free, open... network."  // Hero description
+  },
+  "irc": {
+    "host": "irc.pureirc.com",                 // IRC server host
+    "port": 6667,                              // Default port
+    "portSSL": 6697,                           // SSL port
+    "defaultChannel": "#PureIRC"               // Channel to join
+  },
+  "branding": {
+    "defaultTheme": "cyan",                    // One of: cyan, purple, emerald, rose, amber, blue
+    "icon": "radio"                            // Lucide icon name
+  },
+  "ui": {
+    "showThemeSwitcher": false                 // Show theme selector in header
+  }
+}
+```
+
+**Environment variable overrides:**
+
+Create a `.env` file to override config values:
+
+```env
+IRC_HOST=irc.example.com
+IRC_PORT=6667
+IRC_SSL_PORT=6697
+```
+
+The priority is: Environment Variables > config.json > Defaults
+
+### Themes
+
+The site includes 6 built-in themes. Change the theme by editing `config.json`:
+
+```json
+{
+  "branding": {
+    "defaultTheme": "purple"  // cyan, purple, emerald, rose, amber, or blue
+  },
+  "ui": {
+    "showThemeSwitcher": true  // Show theme picker in header for users
+  }
+}
+```
+
+Users can also pick their preferred theme (stored in browser localStorage) if the switcher is enabled.
+
+**Available themes:**
+
+| Theme | Color | Hex |
+|-------|-------|-----|
+| Cyan | Cool cyan | #06b6d4 |
+| Purple | Elegant purple | #a855f7 |
+| Emerald | Fresh green | #10b981 |
+| Rose | Warm pink | #f43f5e |
+| Amber | Warm gold | #f59e0b |
+| Blue | Classic blue | #3b82f6 |
+
+To add new themes, add them to the `themes` object in `config.json`.
 
 ### Production Deployment (systemd)
 
@@ -314,8 +393,9 @@ Express Server (port 3000)
 
 ```
 ├── server.js                  # Express + HTTP server entry point
+├── config.json                # Site configuration (brand, theme, IRC host, etc.)
 ├── package.json
-├── .env.example               # Configuration template
+├── .env.example               # Environment variables template
 │
 ├── api/
 │   ├── routes.js              # Route definitions
@@ -332,6 +412,13 @@ Express Server (port 3000)
     ├── chat.html              # Standalone full-page chat client
     └── js/
         ├── main.js            # All UI + IRC client logic
+        ├── config-manager.js  # Load & access configuration
+        ├── theme-manager.js   # Handle theme switching
+        ├── api-client.js      # API request wrapper
+        ├── app.js             # Frontend initialization
+        ├── irc-modal.js       # Chat modal component
+        ├── channel-renderer.js # Channel list UI
+        ├── stats-widget.js    # Stats display
         └── lucide.min.js      # Icon library (local)
 ```
 
@@ -350,6 +437,12 @@ Returns array of channels with user counts and topics.
 GET /api/stats
 ```
 Returns users online, total channels, operators, uptime.
+
+### Get Configuration
+```
+GET /api/config
+```
+Returns the merged configuration (config.json + environment variables). Used by the frontend to customize UI, branding, and themes.
 
 ### Health Check
 ```
@@ -406,6 +499,48 @@ curl http://localhost:3000/health
 ```
 
 All frontend logic is in `public/js/main.js`. Edit Tailwind classes directly in the HTML files.
+
+---
+
+## Using This for Other IRC Networks
+
+This website is designed to be easily adaptable for any IRC network. To use it for your network:
+
+1. **Edit `config.json`:**
+   ```json
+   {
+     "site": {
+       "name": "YourNetwork",
+       "fullName": "Your Network Name",
+       "domain": "yournetwork.com",
+       "description": "Your network description"
+     },
+     "irc": {
+       "host": "irc.yournetwork.com",
+       "port": 6667,
+       "defaultChannel": "#YourNetwork"
+     }
+   }
+   ```
+
+2. **Set environment variables (optional):**
+   ```env
+   IRC_HOST=irc.yournetwork.com
+   IRC_PORT=6667
+   ```
+
+3. **Choose a theme** (or create a new one):
+   ```json
+   {
+     "branding": {
+       "defaultTheme": "purple"
+     }
+   }
+   ```
+
+4. **Redeploy** — No code changes needed!
+
+The `/api/config` endpoint serves the configuration to the frontend, and all hardcoded strings are now data-driven. Themes, colors, and branding are all customizable via `config.json`.
 
 ---
 
