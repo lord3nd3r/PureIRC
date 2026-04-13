@@ -1087,6 +1087,57 @@ function switchToChannel() {
 }
 
 // Enter key in channel switch input
+// ========== TAB COMPLETION ==========
+
+let tabCompleteState = { active: false, index: 0, matches: [], prefix: '', cursorStart: 0 };
+
+function tabCompleteNick(input) {
+  const pos = input.selectionStart;
+  const text = input.value;
+
+  if (!tabCompleteState.active) {
+    // Find the word fragment before the cursor
+    let start = pos;
+    while (start > 0 && text[start - 1] !== ' ') start--;
+    const prefix = text.substring(start, pos).toLowerCase();
+    if (!prefix) return;
+
+    const users = channelUsers[normChan(currentIrcChannel)] || [];
+    const matches = users
+      .map(u => u.nick)
+      .filter(n => n.toLowerCase().startsWith(prefix))
+      .sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+
+    if (matches.length === 0) return;
+
+    tabCompleteState = { active: true, index: 0, matches, prefix, cursorStart: start };
+  } else {
+    tabCompleteState.index = (tabCompleteState.index + 1) % tabCompleteState.matches.length;
+  }
+
+  const nick = tabCompleteState.matches[tabCompleteState.index];
+  const suffix = tabCompleteState.cursorStart === 0 ? ': ' : ' ';
+  const before = text.substring(0, tabCompleteState.cursorStart);
+  
+  // Find end of current completion (could be a previous tab-completed nick)
+  let end = tabCompleteState.cursorStart;
+  while (end < text.length && text[end] !== ' ') end++;
+  // Also skip the suffix from previous completion
+  if (text.substring(end, end + 2) === ': ') end += 2;
+  else if (text[end] === ' ') end += 1;
+
+  const after = text.substring(end);
+  input.value = before + nick + suffix + after;
+  const newPos = before.length + nick.length + suffix.length;
+  input.setSelectionRange(newPos, newPos);
+}
+
+function resetTabComplete() {
+  tabCompleteState = { active: false, index: 0, matches: [], prefix: '', cursorStart: 0 };
+}
+
+// ========== EVENT LISTENERS ==========
+
 document.addEventListener('DOMContentLoaded', () => {
   const switchInput = document.getElementById('irc-switch-input');
   if (switchInput) {
@@ -1097,6 +1148,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const chatInput = document.getElementById('irc-input');
   if (chatInput) {
     chatInput.addEventListener('keydown', e => {
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        tabCompleteNick(chatInput);
+        return;
+      }
+      if (e.key !== 'Shift') resetTabComplete();
       if (e.key === 'Enter') sendIrcMessage();
     });
   }
