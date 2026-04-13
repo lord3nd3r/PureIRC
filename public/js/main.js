@@ -799,6 +799,7 @@ function connectIrc() {
   let channel = document.getElementById('irc-channel-input').value.trim() || '#3nd3r';
   if (!channel.startsWith('#')) channel = '#' + channel;
   const useSSL = document.getElementById('irc-ssl')?.checked || false;
+  const nsPassword = document.getElementById('irc-password')?.value.trim() || '';
 
   if (!nickname) {
     nickname = 'PureUser' + Math.floor(Math.random() * 9999);
@@ -838,6 +839,7 @@ function connectIrc() {
       type: 'connect',
       nickname: nickname,
       ssl: useSSL,
+      nsPassword: nsPassword || undefined,
     }));
   };
 

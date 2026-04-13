@@ -141,9 +141,18 @@ export function attachGateway(server) {
             send({ type: 'error', message: 'IRC connection error: ' + (err.message || 'Unknown error') });
           });
 
+          // Store NickServ password if provided
+          const nsPassword = String(msg.nsPassword || '').trim();
+
           ircClient.on('registered', () => {
             clearTimeout(connectTimer);
             connected = true;
+
+            // Auto-identify with NickServ if password was provided
+            if (nsPassword) {
+              ircClient.say('NickServ', 'IDENTIFY ' + nsPassword);
+            }
+
             send({
               type: 'connected',
               nickname: ircClient.user.nick,
