@@ -71,8 +71,14 @@ export function attachGateway(server) {
       joinedChannels.clear();
     }
 
-    ws.on('close', cleanup);
-    ws.on('error', cleanup);
+    ws.on('close', (code, reason) => {
+      console.log(`[Gateway] WebSocket closed: code=${code}, reason=${reason || 'none'}`);
+      cleanup();
+    });
+    ws.on('error', (err) => {
+      console.log(`[Gateway] WebSocket error:`, err.message || err);
+      cleanup();
+    });
 
     ws.on('message', (raw) => {
       let msg;
@@ -94,6 +100,8 @@ export function attachGateway(server) {
           }
           const useSSL = Boolean(msg.ssl);
           const port = useSSL ? CONFIG.sslPort : CONFIG.port;
+
+          console.log(`[Gateway] Connect request: nick=${nickname}, host=${CONFIG.host}, port=${port}, ssl=${useSSL}`);
 
           ircClient = new IrcClient();
 
