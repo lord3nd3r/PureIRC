@@ -76,6 +76,48 @@ async function applyServerConfig() {
       taglineEl.textContent = cfg.site.tagline;
     }
   }
+
+  // Initialize theme switcher
+  if (cfg.ui?.showThemeSwitcher && cfg.themes && window.themeManager) {
+    await window.themeManager.init({ get: (key, def) => {
+      const keys = key.split('.');
+      let val = cfg;
+      for (const k of keys) { val = val?.[k]; }
+      return val ?? def;
+    }});
+    buildThemeSwitcher(cfg.themes);
+  }
+}
+
+/**
+ * Build theme switcher dots in the header
+ */
+function buildThemeSwitcher(themes) {
+  const container = document.getElementById('theme-switcher');
+  if (!container) return;
+
+  container.innerHTML = '';
+  for (const [id, theme] of Object.entries(themes)) {
+    const dot = document.createElement('button');
+    dot.className = 'w-4 h-4 rounded-full border-2 border-transparent hover:scale-125 transition-all';
+    dot.style.backgroundColor = theme.primary;
+    dot.title = theme.name;
+    if (window.themeManager.getTheme() === id) {
+      dot.classList.remove('border-transparent');
+      dot.classList.add('border-white', 'scale-110');
+    }
+    dot.addEventListener('click', () => {
+      window.themeManager.setTheme(id);
+      // Update active dot styling
+      container.querySelectorAll('button').forEach(b => {
+        b.classList.remove('border-white', 'scale-110');
+        b.classList.add('border-transparent');
+      });
+      dot.classList.remove('border-transparent');
+      dot.classList.add('border-white', 'scale-110');
+    });
+    container.appendChild(dot);
+  }
 }
 
 /**
