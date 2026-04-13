@@ -102,14 +102,41 @@ app.get('/health', (req, res) => {
   });
 });
 
+// ========== TEMPLATE RENDERING ==========
+function renderTemplate(filePath, res) {
+  const config = getFinalConfig();
+  const siteName = config.site?.name || 'PureIRC';
+  const domain = config.site?.domain || 'pureirc.com';
+  const description = config.site?.description || '';
+  const tagline = config.site?.tagline || 'The Internet\nRelay Chat Network';
+  const defaultChannel = config.irc?.defaultChannel || '#help';
+  const ircHost = config.irc?.host || 'irc.pureirc.com';
+  const ircPort = String(config.irc?.port || 6667);
+  const ircPortSSL = String(config.irc?.portSSL || 6697);
+
+  let html = fs.readFileSync(filePath, 'utf8');
+  html = html.replace(/\{\{SITE_NAME\}\}/g, siteName);
+  html = html.replace(/\{\{SITE_DOMAIN\}\}/g, domain);
+  html = html.replace(/\{\{SITE_DESCRIPTION\}\}/g, description);
+  html = html.replace(/\{\{SITE_TAGLINE\}\}/g, tagline);
+  html = html.replace(/\{\{DEFAULT_CHANNEL\}\}/g, defaultChannel);
+  html = html.replace(/\{\{IRC_HOST\}\}/g, ircHost);
+  html = html.replace(/\{\{IRC_PORT\}\}/g, ircPort);
+  html = html.replace(/\{\{IRC_PORT_SSL\}\}/g, ircPortSSL);
+
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.send(html);
+}
+
 // ========== ROOT ROUTE ==========
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  renderTemplate(path.join(__dirname, 'public', 'index.html'), res);
 });
 
 // ========== CHAT STANDALONE ==========
 app.get('/chat', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'chat.html'));
+  renderTemplate(path.join(__dirname, 'public', 'chat.html'), res);
 });
 
 // ========== ERROR HANDLING ==========
