@@ -84,14 +84,8 @@ class IRCCache {
         topic: ch.topic || 'No topic set'
       }));
 
-      // Sort alphabetically, pinned channels first
-      const pinned = ['#lobby', '#help'];
-      formatted.sort((a, b) => {
-        const aPin = pinned.includes(a.name) ? 0 : 1;
-        const bPin = pinned.includes(b.name) ? 0 : 1;
-        if (aPin !== bPin) return aPin - bPin;
-        return a.name.localeCompare(b.name);
-      });
+      // Sort by user count descending
+      formatted.sort((a, b) => b.users - a.users);
 
       this.cache.channels.data = formatted;
       this.cache.channels.timestamp = Date.now();
