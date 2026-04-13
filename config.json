@@ -1,0 +1,36 @@
+{
+  "site": {
+    "name": "PureIRC",
+    "fullName": "PureIRC Network",
+    "domain": "pureirc.com",
+    "description": "A free, open, and welcoming IRC network. Connect with thousands of users across hundreds of channels — no registration required.",
+    "favicon": "vite.svg"
+  },
+  "irc": {
+    "host": "irc.pureirc.com",
+    "port": 6667,
+    "portSSL": 6697,
+    "defaultChannel": "#PureIRC",
+    "botName": "PureBot",
+    "botUsername": "purebot",
+    "botRealname": "Pure IRC Bot",
+    "botVersion": "PureBot v1.0",
+    "userPrefix": "PureUser"
+  },
+  "branding": {
+    "accentColor": "cyan",
+    "primaryColor": "#06b6d4",
+    "icon": "radio"
+  },
+  "ui": {
+    "pageTitle": "PureIRC — Free IRC Network",
+    "chatPageTitle": "PureIRC — Web Chat",
+    "headerTitle": "PureIRC Web Client",
+    "modalTitle": "Connect to PureIRC"
+  },
+  "social": {
+    "supportEmail": "support@pureirc.com",
+    "supportChannel": "#help",
+    "githubUrl": "https://github.com/pureirc/network-website"
+  }
+}

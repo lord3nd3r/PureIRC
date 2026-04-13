@@ -4,6 +4,7 @@ import compression from 'compression';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { createServer } from 'http';
 import routes from './api/routes.js';
@@ -48,8 +49,38 @@ app.use(cors({
 // ========== STATIC FILES ==========
 app.use(express.static(path.join(__dirname, 'public')));
 
+// ========== LOAD CONFIG ==========
+let baseConfig = {};
+try {
+  const configPath = path.join(__dirname, 'config.json');
+  const configData = fs.readFileSync(configPath, 'utf8');
+  baseConfig = JSON.parse(configData);
+} catch (err) {
+  console.error('[ERROR] Failed to load config.json:', err);
+}
+
+// Function to build final config (merging env overrides)
+function getFinalConfig() {
+  const config = JSON.parse(JSON.stringify(baseConfig)); // Deep copy
+  
+  // Override with environment variables if set
+  if (process.env.IRC_HOST) config.irc.host = process.env.IRC_HOST;
+  if (process.env.IRC_PORT) config.irc.port = parseInt(process.env.IRC_PORT, 10);
+  if (process.env.IRC_SSL_PORT) config.irc.portSSL = parseInt(process.env.IRC_SSL_PORT, 10);
+  if (process.env.IRC_NICK) config.irc.botName = process.env.IRC_NICK;
+  if (process.env.IRC_USERNAME) config.irc.botUsername = process.env.IRC_USERNAME;
+  if (process.env.IRC_REALNAME) config.irc.botRealname = process.env.IRC_REALNAME;
+  
+  return config;
+}
+
 // ========== API ROUTES ==========
 app.use('/api', routes);
+
+// ========== CONFIG ENDPOINT ==========
+app.get('/api/config', (req, res) => {
+  res.json(getFinalConfig());
+});
 
 // ========== HEALTH CHECK ==========
 app.get('/health', (req, res) => {

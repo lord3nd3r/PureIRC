@@ -20,7 +20,10 @@ class IRCModal {
     this.switchInput = document.getElementById('irc-switch-input');
     this.channelBarPills = document.getElementById('irc-channel-bar-pills');
 
-    this.currentChannel = '#PureIRC';
+    // Load defaults from config or use fallbacks
+    const cfg = window.configManager;
+    this.currentChannel = cfg?.get('irc.defaultChannel', '#general') || '#general';
+    this.ircHost = cfg?.get('irc.host', 'irc.example.com') || 'irc.example.com';
     this.connected = false;
     this.channels = [];
 

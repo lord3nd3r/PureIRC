@@ -8,7 +8,13 @@ import IRCModal from './irc-modal.js';
 
 // Initialize on DOM ready
 document.addEventListener('DOMContentLoaded', async () => {
-  console.log('[App] Initializing PureIRC website');
+  console.log('[App] Initializing website');
+
+  // Load config first
+  if (window.configManager) {
+    await window.configManager.load();
+    applyConfigToPage();
+  }
 
   // Initialize Lucide icons
   if (window.lucide) {
@@ -27,6 +33,67 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupNavHighlight();
   setupFooterYear();
 });
+
+/**
+ * Apply loaded config to page elements
+ */
+function applyConfigToPage() {
+  const cfg = window.configManager;
+  
+  // Update page title
+  document.title = cfg.get('ui.pageTitle', 'IRC Network');
+  
+  // Update header branding
+  const headerLink = document.querySelector('a[href="#home"]');
+  if (headerLink) {
+    const siteName = cfg.get('site.name', 'Network');
+    headerLink.innerHTML = `
+      <div class="w-8 h-8 rounded-lg bg-cyan-500 flex items-center justify-center shadow-md shadow-cyan-500/30">
+        <i data-lucide="${cfg.get('branding.icon', 'radio')}" class="w-4 h-4 text-gray-950"></i>
+      </div>
+      <span class="text-white font-bold text-lg tracking-tight">${siteName.toLowerCase()}<span class="text-cyan-400">IRC</span></span>
+    `;
+    if (window.lucide) lucide.createIcons();
+  }
+
+  // Update "Connect Now" buttons with default channel
+  const defaultChannel = cfg.get('irc.defaultChannel', '#general');
+  document.querySelectorAll('[onclick*="openIrcModal"]').forEach(btn => {
+    btn.setAttribute('onclick', `openIrcModal('${defaultChannel}')`);
+  });
+
+  // Update page descriptions
+  const heroDescription = document.querySelector('p.text-lg.text-gray-400');
+  if (heroDescription) {
+    heroDescription.textContent = cfg.get('site.description', 'Connect with us');
+  }
+
+  // Update modal header if present
+  const modalHeader = document.querySelector('.irc-modal-header h3');
+  if (modalHeader) {
+    modalHeader.textContent = cfg.get('ui.modalTitle', 'Connect');
+  }
+
+  // Update IRC server references
+  const ircHost = cfg.get('irc.host', 'irc.example.com');
+  document.querySelectorAll('code').forEach(code => {
+    if (code.textContent.includes('irc.') && code.textContent.includes('.com')) {
+      code.textContent = ircHost;
+    }
+  });
+
+  // Update footer copyright with site name
+  const footerYear = document.getElementById('footer-year');
+  if (footerYear) {
+    const year = new Date().getFullYear();
+    const copyrightText = document.querySelector('p.text-xs.text-gray-600');
+    if (copyrightText) {
+      copyrightText.textContent = `© ${year} ${cfg.get('site.fullName', 'Network')}. All rights reserved.`;
+    }
+  }
+
+  console.log('[App] Config applied to page');
+}
 
 /**
  * Initialize all modules
