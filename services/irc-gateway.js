@@ -256,6 +256,18 @@ export function attachGateway(server) {
             });
           });
 
+          ircClient.on('mode', (event) => {
+            if (event.target && event.target.startsWith('#')) {
+              send({
+                type: 'mode',
+                channel: event.target,
+                nick: event.nick || '',
+                modes: event.modes || [],
+                time: Date.now(),
+              });
+            }
+          });
+
           ircClient.on('motd', (event) => {
             send({
               type: 'motd',

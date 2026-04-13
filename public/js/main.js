@@ -479,6 +479,19 @@ const MAX_BUFFER_LINES = 500;
 // IRC channels are case-insensitive, normalize for lookups
 function normChan(ch) { return (ch || '').toLowerCase(); }
 
+// Look up a user's highest mode prefix (@, +, etc.) in a channel
+function getUserPrefix(nick, channel) {
+  const users = channelUsers[normChan(channel)] || [];
+  const user = users.find(u => u.nick === nick);
+  if (!user || !user.modes || user.modes.length === 0) return '';
+  if (user.modes.includes('q')) return '~';
+  if (user.modes.includes('a')) return '&';
+  if (user.modes.includes('o')) return '@';
+  if (user.modes.includes('h')) return '%';
+  if (user.modes.includes('v')) return '+';
+  return '';
+}
+
 function getBuffer(ch) {
   const key = normChan(ch);
   if (!channelBuffers[key]) channelBuffers[key] = [];
@@ -794,11 +807,13 @@ function handleIrcMessage(data) {
       const time = formatTime(data.time);
       const color = nickColor(data.nick);
       const selfClass = data.isSelf ? ' msg-self' : '';
+      const prefix = getUserPrefix(data.nick, dest);
+      const prefixHtml = prefix ? `<span class="user-prefix">${prefix}</span>` : '';
       let html;
       if (data.isAction) {
-        html = `<div class="msg-line msg-action${selfClass}"><span class="text-gray-600">${time}</span> * <span class="msg-nick" style="color:${color}">${escapeHtml(data.nick)}</span> ${escapeHtml(data.message)}</div>`;
+        html = `<div class="msg-line msg-action${selfClass}"><span class="text-gray-600">${time}</span> * ${prefixHtml}<span class="msg-nick" style="color:${color}">${escapeHtml(data.nick)}</span> ${escapeHtml(data.message)}</div>`;
       } else {
-        html = `<div class="msg-line${selfClass}"><span class="text-gray-600">${time}</span> <span class="msg-nick" style="color:${color}">&lt;${escapeHtml(data.nick)}&gt;</span> <span class="text-gray-300">${escapeHtml(data.message)}</span></div>`;
+        html = `<div class="msg-line${selfClass}"><span class="text-gray-600">${time}</span> <span class="msg-nick" style="color:${color}">&lt;${prefixHtml}${escapeHtml(data.nick)}&gt;</span> <span class="text-gray-300">${escapeHtml(data.message)}</span></div>`;
       }
       ensureTab(dest);
       appendToBuffer(dest, html);
@@ -915,6 +930,25 @@ function handleIrcMessage(data) {
       channelUsers[normChan(data.channel)] = data.users;
       if (normChan(data.channel) === normChan(currentIrcChannel)) renderUserList();
       break;
+
+    case 'mode': {
+      const chKey = normChan(data.channel);
+      const users = channelUsers[chKey] || [];
+      if (data.modes && Array.isArray(data.modes)) {
+        for (const m of data.modes) {
+          if (!m.param) continue;
+          const user = users.find(u => u.nick === m.param);
+          if (!user) continue;
+          if (m.adding) {
+            if (!user.modes.includes(m.mode)) user.modes.push(m.mode);
+          } else {
+            user.modes = user.modes.filter(x => x !== m.mode);
+          }
+        }
+      }
+      if (chKey === normChan(currentIrcChannel)) renderUserList();
+      break;
+    }
 
     case 'motd':
       if (data.motd) {
