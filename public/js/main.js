@@ -1,5 +1,5 @@
 /**
- * PureIRC Website - Main Application
+ * 3nd3r.net Website - Main Application
  * Simplified single-file approach (no ES modules)
  */
 
@@ -15,7 +15,7 @@ let cachedStats = {};
  * Initialize the entire application
  */
 function initApp() {
-  console.log('[App] Initializing PureIRC website');
+  console.log('[App] Initializing 3nd3r.net website');
 
   // Wait for DOM to be ready
   if (document.readyState === 'loading') {
@@ -43,6 +43,9 @@ async function startApp() {
   setupFooterYear();
   setupIrcModal();
 
+  // Apply config from server
+  applyServerConfig().catch(e => console.warn('[Config]', e.message));
+
   // Load data in background (don't block UI)
   loadChannels().catch(e => console.warn('[Channels]', e.message));
   loadStats().catch(e => console.warn('[Stats]', e.message));
@@ -53,6 +56,26 @@ async function startApp() {
   setInterval(() => loadStats().catch(() => {}), STATS_REFRESH_INTERVAL);
 
   console.log('[App] Initialization complete');
+}
+
+/**
+ * Fetch config from server and apply to page
+ */
+async function applyServerConfig() {
+  const response = await fetch(`${API_BASE}/config`);
+  if (!response.ok) return;
+  const cfg = await response.json();
+
+  // Apply tagline to hero heading
+  const taglineEl = document.getElementById('hero-tagline');
+  if (taglineEl && cfg.site?.tagline) {
+    const lines = cfg.site.tagline.split('\n');
+    if (lines.length >= 2) {
+      taglineEl.innerHTML = `${lines[0]}<br><span class="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-teal-400">${lines[1]}</span>`;
+    } else {
+      taglineEl.textContent = cfg.site.tagline;
+    }
+  }
 }
 
 /**
@@ -166,13 +189,13 @@ function renderStats() {
  */
 function getDefaultChannels() {
   return [
-    { name: '#PureIRC', topic: 'Welcome to PureIRC - The insanity begins.', users: 57, category: 'General', pinned: true },
+    { name: '#3nd3r', topic: 'Welcome to 3nd3r.net - The insanity begins.', users: 57, category: 'General', pinned: true },
     { name: '#chat', topic: 'Everyone is welcome here', users: 20, category: 'General', pinned: true },
-    { name: '#help', topic: 'Welcome to #help @ PureIRC -- Please state what you need help with.', users: 12, category: 'Support', pinned: true },
+    { name: '#help', topic: 'Welcome to #help @ 3nd3r.net -- Please state what you need help with.', users: 12, category: 'Support', pinned: true },
     { name: '#dennis', topic: '', users: 20, category: 'General', pinned: false },
-    { name: '#irpg', topic: 'https://idlerpg.net/ - PureIRC\'s IDLERPG channel', users: 20, category: 'Gaming', pinned: false },
+    { name: '#irpg', topic: 'https://idlerpg.net/ - 3nd3r.net\'s IDLERPG channel', users: 20, category: 'Gaming', pinned: false },
     { name: '#canada', topic: 'Welcome to #Canada - the 51st state!', users: 15, category: 'General', pinned: false },
-    { name: '#pureirc.us', topic: 'Official Channel for the irc.PureIRC.us PureIRC client servers', users: 15, category: 'Network', pinned: false },
+    { name: '#3nd3r', topic: 'Official Channel for the irc.3nd3r.net.us 3nd3r.net client servers', users: 15, category: 'Network', pinned: false },
     { name: '#routing', topic: 'Got link? Look here for Region info', users: 14, category: 'Network', pinned: false },
     { name: '#1up', topic: '', users: 12, category: 'General', pinned: false }
   ];
@@ -270,11 +293,11 @@ function setupFaqAccordion() {
   if (!container) return;
 
   const faqs = [
-    { q: 'Do I need to register to use PureIRC?', a: 'No registration is required to connect and chat. You can optionally register your nickname using NickServ to reserve it: /msg NickServ REGISTER yourpassword youremail@example.com' },
+    { q: 'Do I need to register to use 3nd3r.net?', a: 'No registration is required to connect and chat. You can optionally register your nickname using NickServ to reserve it: /msg NickServ REGISTER yourpassword youremail@example.com' },
     { q: 'How do I register my nickname?', a: 'Once connected, type: /msg NickServ REGISTER <password> <email>. You\'ll receive a verification code via email. Follow the instructions in the email to complete registration.' },
-    { q: 'Can I run a bot on PureIRC?', a: 'Bots are allowed with prior approval. Connect to #help or message an IRCop to request bot access. Provide a brief description of your bot\'s purpose.' },
+    { q: 'Can I run a bot on 3nd3r.net?', a: 'Bots are allowed with prior approval. Connect to #help or message an IRCop to request bot access. Provide a brief description of your bot\'s purpose.' },
     { q: 'How do I create my own channel?', a: 'Simply join a channel that doesn\'t exist yet: /join #mychannel. You\'ll automatically become channel operator. Register it with ChanServ to keep ownership: /msg ChanServ REGISTER #mychannel' },
-    { q: 'Is SSL/TLS supported?', a: 'Yes. Connect to irc.pureirc.com on port 6697 and enable SSL/TLS in your client settings for an encrypted connection.' },
+    { q: 'Is SSL/TLS supported?', a: 'Yes. Connect to irc.rizon.net on port 6697 and enable SSL/TLS in your client settings for an encrypted connection.' },
     { q: 'How do I report abuse or harassment?', a: 'Join #help or use /oper to reach a network operator. You can also use /msg <IRCop> to contact staff directly. Provide logs and any relevant context.' }
   ];
 
@@ -539,7 +562,7 @@ function showBuffer(ch) {
 }
 
 function openIrcModal(channel) {
-  channel = channel || '#PureIRC';
+  channel = channel || '#3nd3r';
   if (!channel.startsWith('#')) channel = '#' + channel;
   currentIrcChannel = channel;
 
@@ -691,7 +714,7 @@ function closeTab(tab) {
 
 function connectIrc() {
   let nickname = document.getElementById('irc-nickname').value.trim();
-  let channel = document.getElementById('irc-channel-input').value.trim() || '#PureIRC';
+  let channel = document.getElementById('irc-channel-input').value.trim() || '#3nd3r';
   if (!channel.startsWith('#')) channel = '#' + channel;
   const useSSL = document.getElementById('irc-ssl')?.checked || false;
 
@@ -760,7 +783,7 @@ function connectIrc() {
     }
     if (connectBtn) {
       connectBtn.disabled = false;
-      connectBtn.innerHTML = '<i data-lucide="radio" class="w-4 h-4"></i> Connect to PureIRC';
+      connectBtn.innerHTML = '<i data-lucide="radio" class="w-4 h-4"></i> Connect to 3nd3r.net';
       if (window.lucide) window.lucide.createIcons();
     }
     ws = null;
@@ -800,7 +823,7 @@ function handleIrcMessage(data) {
       showBuffer('*status');
 
       // Join the initial channel
-      const initCh = window._ircInitialChannel || '#PureIRC';
+      const initCh = window._ircInitialChannel || '#3nd3r';
       ws.send(JSON.stringify({ type: 'join', channel: initCh }));
       break;
 

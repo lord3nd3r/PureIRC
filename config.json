@@ -4,6 +4,7 @@
     "fullName": "3nd3r.net Network",
     "domain": "3nd3r.net",
     "description": "A free, open, and welcoming IRC network. Connect with thousands of users across hundreds of channels — no registration required.",
+    "tagline": "The Internet\nRelay Chat Network",
     "favicon": "vite.svg"
   },
   "irc": {
