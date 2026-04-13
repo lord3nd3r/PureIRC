@@ -1053,6 +1053,7 @@ function handleIrcMessage(data) {
     case 'mode': {
       const chKey = normChan(data.channel);
       const users = channelUsers[chKey] || [];
+      console.log('[Mode] channel:', data.channel, 'users in list:', users.length, 'modes:', JSON.stringify(data.modes));
       if (data.modes && Array.isArray(data.modes)) {
         // Build readable mode string like "+ao Nick Nick"
         let adding = null;
@@ -1067,6 +1068,7 @@ function handleIrcMessage(data) {
           if (m.param) params.push(m.param);
           // Update internal user state
           const user = users.find(u => u.nick === m.param);
+          console.log('[Mode] Updating', m.param, 'found:', !!user, 'adding:', m.adding, 'mode:', m.mode);
           if (!user) continue;
           if (m.adding) {
             if (!user.modes.includes(m.mode)) user.modes.push(m.mode);
@@ -1078,7 +1080,10 @@ function handleIrcMessage(data) {
         const who = data.nick ? escapeHtml(data.nick) : 'server';
         appendToBuffer(data.channel, `<div class="msg-line msg-system"><span class="text-gray-600">${formatTime(data.time)}</span> ★ ${who} sets mode ${escapeHtml(modeDisplay)}</div>`);
       }
-      if (chKey === normChan(currentIrcChannel)) renderUserList();
+      if (chKey === normChan(currentIrcChannel)) {
+        console.log('[Mode] After update, channelUsers:', JSON.stringify(channelUsers[chKey]?.map(u => u.nick + ':' + u.modes.join(','))));
+        renderUserList();
+      }
       break;
     }
 
