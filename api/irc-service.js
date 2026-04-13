@@ -43,7 +43,7 @@ class IRCService {
 
         // Connection established
         this.client.on('registered', () => {
-          console.log(`[IRC] Connected and registered as ${this.client.nick}`);
+          console.log(`[IRC] Connected and registered as ${this.client.user.nick}`);
           this.connected = true;
           if (!resolved) { resolved = true; resolve(this); }
         });

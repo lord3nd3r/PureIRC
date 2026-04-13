@@ -104,7 +104,8 @@ function renderChannels() {
 
   grid.innerHTML = '';
 
-  const channels = cachedChannels.length > 0 ? cachedChannels : getDefaultChannels();
+  const allChannels = cachedChannels.length > 0 ? cachedChannels : getDefaultChannels();
+  const channels = allChannels.slice(0, 9);
 
   channels.forEach(ch => {
     const colorClass = categoryColors[ch.category] || 'text-gray-400 bg-white/5 border-white/10';
@@ -361,7 +362,8 @@ function setupChannelQuickPicks() {
   if (!quickPicks) return;
 
   quickPicks.innerHTML = '';
-  const channels = cachedChannels.length > 0 ? cachedChannels : getDefaultChannels();
+  const allChannels = cachedChannels.length > 0 ? cachedChannels : getDefaultChannels();
+  const channels = allChannels.slice(0, 9);
 
   channels.forEach(ch => {
     quickPicks.innerHTML += `
