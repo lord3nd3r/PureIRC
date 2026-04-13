@@ -1042,8 +1042,18 @@ function handleIrcMessage(data) {
       const chKey = normChan(data.channel);
       const users = channelUsers[chKey] || [];
       if (data.modes && Array.isArray(data.modes)) {
+        // Build readable mode string like "+ao Nick Nick"
+        let adding = null;
+        let modeStr = '';
+        let params = [];
         for (const m of data.modes) {
-          if (!m.param) continue;
+          if (m.adding !== adding) {
+            adding = m.adding;
+            modeStr += adding ? '+' : '-';
+          }
+          modeStr += m.mode;
+          if (m.param) params.push(m.param);
+          // Update internal user state
           const user = users.find(u => u.nick === m.param);
           if (!user) continue;
           if (m.adding) {
@@ -1052,6 +1062,9 @@ function handleIrcMessage(data) {
             user.modes = user.modes.filter(x => x !== m.mode);
           }
         }
+        const modeDisplay = modeStr + (params.length ? ' ' + params.join(' ') : '');
+        const who = data.nick ? escapeHtml(data.nick) : 'server';
+        appendToBuffer(data.channel, `<div class="msg-line msg-system"><span class="text-gray-600">${formatTime(data.time)}</span> ★ ${who} sets mode ${escapeHtml(modeDisplay)}</div>`);
       }
       if (chKey === normChan(currentIrcChannel)) renderUserList();
       break;
@@ -1104,18 +1117,32 @@ function renderUserList() {
 
   const users = channelUsers[normChan(currentIrcChannel)] || [];
 
+  // Rank modes for sorting: q=5, a=4, o=3, h=2, v=1, none=0
+  function modeRank(modes) {
+    if (modes.includes('q')) return 5;
+    if (modes.includes('a')) return 4;
+    if (modes.includes('o')) return 3;
+    if (modes.includes('h')) return 2;
+    if (modes.includes('v')) return 1;
+    return 0;
+  }
+  function modePrefix(modes) {
+    if (modes.includes('q')) return '~';
+    if (modes.includes('a')) return '&';
+    if (modes.includes('o')) return '@';
+    if (modes.includes('h')) return '%';
+    if (modes.includes('v')) return '+';
+    return '';
+  }
+
   users.sort((a, b) => {
-    const aOp = a.modes.includes('o'), bOp = b.modes.includes('o');
-    const aVoice = a.modes.includes('v'), bVoice = b.modes.includes('v');
-    if (aOp !== bOp) return aOp ? -1 : 1;
-    if (aVoice !== bVoice) return aVoice ? -1 : 1;
+    const diff = modeRank(b.modes) - modeRank(a.modes);
+    if (diff !== 0) return diff;
     return a.nick.toLowerCase().localeCompare(b.nick.toLowerCase());
   });
 
   listEl.innerHTML = users.map(u => {
-    let prefix = '';
-    if (u.modes.includes('o')) prefix = '@';
-    else if (u.modes.includes('v')) prefix = '+';
+    const prefix = modePrefix(u.modes);
     return `<div class="user-item">${prefix ? '<span class="user-prefix">' + prefix + '</span>' : ''}${escapeHtml(u.nick)}</div>`;
   }).join('');
 
