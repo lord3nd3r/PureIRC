@@ -78,6 +78,7 @@ console.log('[Config] Loaded with IRC host:', global.appConfig.irc.host);
 
 // ========== TEMPLATE RENDERING FUNCTION ==========
 async function renderTemplate(filePath, res) {
+  console.log(`[Template] Rendering ${filePath}...`);
   try {
     const config = getFinalConfig();
     const siteName = config.site?.name || 'PureIRC';
@@ -106,6 +107,7 @@ async function renderTemplate(filePath, res) {
     }
 
     let html = fs.readFileSync(filePath, 'utf8');
+    console.log(`[Template] Read file, replacing ${html.match(/\{\{[A-Z_]+\}\}/g)?.length || 0} placeholders...`);
     html = html.replace(/\{\{SITE_NAME\}\}/g, siteName);
     html = html.replace(/\{\{SITE_DOMAIN\}\}/g, domain);
     html = html.replace(/\{\{SITE_DESCRIPTION\}\}/g, description);
@@ -119,6 +121,7 @@ async function renderTemplate(filePath, res) {
     html = html.replace(/\{\{IRC_PORT\}\}/g, ircPort);
     html = html.replace(/\{\{IRC_PORT_SSL\}\}/g, ircPortSSL);
     html = html.replace(/\{\{MAX_CHANNELS\}\}/g, maxChannels);
+    console.log(`[Template] Replacements complete, sending ${html.length} bytes`);
 
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
