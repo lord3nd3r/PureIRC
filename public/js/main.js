@@ -67,6 +67,9 @@ async function applyServerConfig() {
   if (!response.ok) return;
   const cfg = await response.json();
 
+  // Store config for other modules to access
+  window._serverConfig = cfg;
+
   // Apply tagline to hero heading
   const taglineEl = document.getElementById('hero-tagline');
   if (taglineEl && cfg.site?.tagline) {
@@ -432,8 +435,7 @@ function setupChannelQuickPicks() {
   quickPicks.innerHTML = '';
 
   // Use featured channels from config if available
-  const cfg = window.configManager?.config;
-  const featuredChannels = cfg?.ui?.channelsDisplay?.featuredChannels || [];
+    const cfg = window._serverConfig || window.configManager?.config;
 
   if (featuredChannels.length > 0) {
     featuredChannels.forEach(name => {
