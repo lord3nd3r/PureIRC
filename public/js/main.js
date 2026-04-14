@@ -45,7 +45,7 @@ async function startApp() {
   setupThemeDropdown();
 
   // Apply config from server
-  applyServerConfig().catch(e => console.warn('[Config]', e.message));
+  await applyServerConfig().catch(e => console.warn('[Config]', e.message));
 
   // Load data in background (don't block UI)
   loadChannels().catch(e => console.warn('[Channels]', e.message));
