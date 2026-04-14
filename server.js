@@ -47,16 +47,6 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-// ========== STATIC FILES ==========
-app.use(express.static(path.join(__dirname, 'public'), {
-  etag: false,
-  setHeaders: (res, filePath) => {
-    if (filePath.endsWith('.js') || filePath.endsWith('.html')) {
-      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-    }
-  }
-}));
-
 // ========== LOAD CONFIG ==========
 let baseConfig = {};
 try {
@@ -86,39 +76,7 @@ function getFinalConfig() {
 global.appConfig = getFinalConfig();
 console.log('[Config] Loaded with IRC host:', global.appConfig.irc.host);
 
-// ========== CONFIG ENDPOINT ==========
-app.get('/api/config', async (req, res) => {
-  const config = getFinalConfig();
-  
-  // Add real channel count from IRC cache
-  try {
-    const cache = getCache();
-    const channels = await cache.getChannels();
-    config.irc.maxChannels = channels.length;
-  } catch (err) {
-    console.warn('[Config] Could not fetch live channel count:', err.message);
-    // Fall back to config value if available
-    if (!config.irc.maxChannels) {
-      config.irc.maxChannels = 0;
-    }
-  }
-  
-  res.json(config);
-});
-
-// ========== API ROUTES ==========
-app.use('/api', routes);
-
-// ========== HEALTH CHECK ==========
-app.get('/health', (req, res) => {
-  res.json({
-    status: 'ok',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime()
-  });
-});
-
-// ========== TEMPLATE RENDERING ==========
+// ========== TEMPLATE RENDERING FUNCTION ==========
 async function renderTemplate(filePath, res) {
   try {
     const config = getFinalConfig();
@@ -171,6 +129,26 @@ async function renderTemplate(filePath, res) {
   }
 }
 
+// ========== CONFIG ENDPOINT ==========
+app.get('/api/config', async (req, res) => {
+  const config = getFinalConfig();
+  
+  // Add real channel count from IRC cache
+  try {
+    const cache = getCache();
+    const channels = await cache.getChannels();
+    config.irc.maxChannels = channels.length;
+  } catch (err) {
+    console.warn('[Config] Could not fetch live channel count:', err.message);
+    // Fall back to config value if available
+    if (!config.irc.maxChannels) {
+      config.irc.maxChannels = 0;
+    }
+  }
+  
+  res.json(config);
+});
+
 // ========== ROOT ROUTE ==========
 app.get('/', async (req, res) => {
   await renderTemplate(path.join(__dirname, 'public', 'index.html'), res);
@@ -180,6 +158,28 @@ app.get('/', async (req, res) => {
 app.get('/chat', async (req, res) => {
   await renderTemplate(path.join(__dirname, 'public', 'chat.html'), res);
 });
+
+// ========== API ROUTES ==========
+app.use('/api', routes);
+
+// ========== HEALTH CHECK ==========
+app.get('/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime()
+  });
+});
+
+// ========== STATIC FILES (serve after dynamic routes) ==========
+app.use(express.static(path.join(__dirname, 'public'), {
+  etag: false,
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('.js')) {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    }
+  }
+}));
 
 // ========== ERROR HANDLING ==========
 app.use((err, req, res, next) => {
