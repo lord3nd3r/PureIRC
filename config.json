@@ -28,7 +28,7 @@
     "showThemeSwitcher": true,
     "channelsDisplay": {
       "maxChannels": 18,
-      "featuredChannels": ["#preppers", "#chat", "#computertech"]
+      "featuredChannels": ["#preppers", "#chat", "#computertech", "#rizon", "#help"]
     }
   },
   "social": {
