@@ -160,6 +160,17 @@ async function loadStats() {
 }
 
 /**
+ * Categorize a channel by name
+ */
+function categorizeChannel(name) {
+  const n = name.toLowerCase();
+  if (['#help'].includes(n)) return 'Support';
+  if (['#irpg', '#gaming', '#games'].includes(n)) return 'Gaming';
+  if (['#ascii', '#buzznet', '#eulenspiegal', '#godzilla'].includes(n)) return 'Entertainment';
+  return 'General';
+}
+
+/**
  * Render channels grid
  */
 function renderChannels() {
@@ -180,7 +191,8 @@ function renderChannels() {
   const channels = allChannels.slice(0, 18);
 
   channels.forEach(ch => {
-    const colorClass = categoryColors[ch.category] || 'text-gray-400 bg-white/5 border-white/10';
+    const category = ch.category || categorizeChannel(ch.name);
+    const colorClass = categoryColors[category] || 'text-gray-400 bg-white/5 border-white/10';
     const html = `
       <div onclick="openIrcModal('${ch.name}')" class="group bg-gray-900 hover:bg-gray-800/80 border border-white/5 hover:border-white/10 rounded-xl p-5 transition-all duration-200 hover:-translate-y-0.5 cursor-pointer">
         <div class="flex items-start justify-between mb-3">
@@ -194,7 +206,7 @@ function renderChannels() {
         </div>
         <p class="text-xs text-gray-500 leading-relaxed mb-4 line-clamp-2">${ch.topic}</p>
         <div class="flex items-center justify-between">
-          <span class="text-xs px-2.5 py-1 rounded-full border font-medium ${colorClass}">${ch.category}</span>
+          <span class="text-xs px-2.5 py-1 rounded-full border font-medium ${colorClass}">${category}</span>
           <div class="flex items-center gap-1.5 text-xs text-gray-500">
             <i data-lucide="users" class="w-3.5 h-3.5"></i>
             ${typeof ch.users === 'number' ? ch.users.toLocaleString() : ch.users}
