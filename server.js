@@ -120,49 +120,55 @@ app.get('/health', (req, res) => {
 
 // ========== TEMPLATE RENDERING ==========
 async function renderTemplate(filePath, res) {
-  const config = getFinalConfig();
-  const siteName = config.site?.name || 'PureIRC';
-  const domain = config.site?.domain || 'pureirc.com';
-  const description = config.site?.description || '';
-  const tagline = config.site?.tagline || 'The Internet\nRelay Chat Network';
-  const footerDescription = config.site?.footerDescription || '';
-  const foundedYear = String(config.site?.foundedYear || new Date().getFullYear());
-  const defaultChannel = config.irc?.defaultChannel || '#help';
-  const supportChannel = config.social?.supportChannel || '#help';
-  const userPrefix = config.irc?.userPrefix || 'User';
-  const ircHost = config.irc?.host || 'irc.pureirc.com';
-  const ircPort = String(config.irc?.port || 6667);
-  const ircPortSSL = String(config.irc?.portSSL || 6697);
-
-  // Fetch live channel count from IRC cache
-  let maxChannels = '0';
   try {
-    const cache = getCache();
-    const channels = await cache.getChannels();
-    maxChannels = String(channels.length || 0);
+    const config = getFinalConfig();
+    const siteName = config.site?.name || 'PureIRC';
+    const domain = config.site?.domain || 'pureirc.com';
+    const description = config.site?.description || '';
+    const tagline = config.site?.tagline || 'The Internet\nRelay Chat Network';
+    const footerDescription = config.site?.footerDescription || '';
+    const foundedYear = String(config.site?.foundedYear || new Date().getFullYear());
+    const defaultChannel = config.irc?.defaultChannel || '#help';
+    const supportChannel = config.social?.supportChannel || '#help';
+    const userPrefix = config.irc?.userPrefix || 'User';
+    const ircHost = config.irc?.host || 'irc.pureirc.com';
+    const ircPort = String(config.irc?.port || 6667);
+    const ircPortSSL = String(config.irc?.portSSL || 6697);
+
+    // Fetch live channel count from IRC cache
+    let maxChannels = '0';
+    try {
+      const cache = getCache();
+      const channels = await cache.getChannels();
+      maxChannels = String(channels.length || 0);
+      console.log(`[Template] Fetched ${maxChannels} channels for rendering`);
+    } catch (err) {
+      console.warn('[Template] Could not fetch live channel count:', err.message);
+      maxChannels = '0';
+    }
+
+    let html = fs.readFileSync(filePath, 'utf8');
+    html = html.replace(/\{\{SITE_NAME\}\}/g, siteName);
+    html = html.replace(/\{\{SITE_DOMAIN\}\}/g, domain);
+    html = html.replace(/\{\{SITE_DESCRIPTION\}\}/g, description);
+    html = html.replace(/\{\{SITE_TAGLINE\}\}/g, tagline);
+    html = html.replace(/\{\{FOOTER_DESCRIPTION\}\}/g, footerDescription);
+    html = html.replace(/\{\{FOUNDED_YEAR\}\}/g, foundedYear);
+    html = html.replace(/\{\{DEFAULT_CHANNEL\}\}/g, defaultChannel);
+    html = html.replace(/\{\{SUPPORT_CHANNEL\}\}/g, supportChannel);
+    html = html.replace(/\{\{USER_PREFIX\}\}/g, userPrefix);
+    html = html.replace(/\{\{IRC_HOST\}\}/g, ircHost);
+    html = html.replace(/\{\{IRC_PORT\}\}/g, ircPort);
+    html = html.replace(/\{\{IRC_PORT_SSL\}\}/g, ircPortSSL);
+    html = html.replace(/\{\{MAX_CHANNELS\}\}/g, maxChannels);
+
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.send(html);
   } catch (err) {
-    console.warn('[Template] Could not fetch live channel count:', err.message);
-    maxChannels = '0';
+    console.error('[Template] Rendering error:', err);
+    res.status(500).send('Template rendering error: ' + err.message);
   }
-
-  let html = fs.readFileSync(filePath, 'utf8');
-  html = html.replace(/\{\{SITE_NAME\}\}/g, siteName);
-  html = html.replace(/\{\{SITE_DOMAIN\}\}/g, domain);
-  html = html.replace(/\{\{SITE_DESCRIPTION\}\}/g, description);
-  html = html.replace(/\{\{SITE_TAGLINE\}\}/g, tagline);
-  html = html.replace(/\{\{FOOTER_DESCRIPTION\}\}/g, footerDescription);
-  html = html.replace(/\{\{FOUNDED_YEAR\}\}/g, foundedYear);
-  html = html.replace(/\{\{DEFAULT_CHANNEL\}\}/g, defaultChannel);
-  html = html.replace(/\{\{SUPPORT_CHANNEL\}\}/g, supportChannel);
-  html = html.replace(/\{\{USER_PREFIX\}\}/g, userPrefix);
-  html = html.replace(/\{\{IRC_HOST\}\}/g, ircHost);
-  html = html.replace(/\{\{IRC_PORT\}\}/g, ircPort);
-  html = html.replace(/\{\{IRC_PORT_SSL\}\}/g, ircPortSSL);
-  html = html.replace(/\{\{MAX_CHANNELS\}\}/g, maxChannels);
-
-  res.setHeader('Content-Type', 'text/html; charset=utf-8');
-  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-  res.send(html);
 }
 
 // ========== ROOT ROUTE ==========
