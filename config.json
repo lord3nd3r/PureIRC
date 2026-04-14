@@ -25,7 +25,11 @@
     "defaultTheme": "cyan"
   },
   "ui": {
-    "showThemeSwitcher": true
+    "showThemeSwitcher": true,
+    "channelsDisplay": {
+      "maxChannels": 18,
+      "featuredChannels": ["#3nd3r", "#chat", "#help"]
+    }
   },
   "social": {
     "supportEmail": "lord3nd3r@gmail.com",

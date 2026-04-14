@@ -62,21 +62,25 @@ class ChannelRenderer {
       return;
     }
 
-    // Get pinned channels
-    const pinnedNames = ['#pureirc', '#chat', '#help'];
-    const pinned = this.channels.filter(ch => pinnedNames.includes(ch.name.toLowerCase()));
-    const unpinned = this.channels.filter(ch => !pinnedNames.includes(ch.name.toLowerCase()));
+    // Get featured channels from config
+    const config = window.SITE_CONFIG || {};
+    const featuredChannels = window.appConfig?.ui?.channelsDisplay?.featuredChannels || ['#3nd3r', '#chat', '#help'];
+    const maxDisplay = window.appConfig?.ui?.channelsDisplay?.maxChannels || 18;
+    
+    const featuredNames = featuredChannels.map(ch => ch.toLowerCase());
+    const featured = this.channels.filter(ch => featuredNames.includes(ch.name.toLowerCase()));
+    const unpinned = this.channels.filter(ch => !featuredNames.includes(ch.name.toLowerCase()));
 
-    // Combine: pinned first, then rest sorted by user count
+    // Combine: featured first, then rest sorted by user count
     const sorted = [
-      ...pinned.sort((a, b) => a.name.localeCompare(b.name)),
+      ...featured.sort((a, b) => a.name.localeCompare(b.name)),
       ...unpinned.sort((a, b) => b.users - a.users)
     ];
 
-    // Render only top 9 for homepage
-    const displayed = sorted.slice(0, 9);
+    // Render top N channels based on config
+    const displayed = sorted.slice(0, maxDisplay);
 
-    this.grid.innerHTML = displayed.map(ch => this.createChannelCard(ch)).join('');
+    this.grid.innerHTML = displayed.map(ch => this.createChannelCard(ch, featuredNames)).join('');
 
     // Re-initialize Lucide icons for new content
     if (window.lucide) {
@@ -87,11 +91,11 @@ class ChannelRenderer {
   /**
    * Create a channel card HTML
    */
-  createChannelCard(channel) {
+  createChannelCard(channel, featuredNames = []) {
     const { name, users, topic } = channel;
     const category = this.categorizeChannel(name);
     const colorClass = this.categoryColors[category] || "text-gray-400 bg-white/5 border-white/10";
-    const isPinned = ['#pureirc', '#chat', '#help'].includes(name.toLowerCase());
+    const isFeatured = featuredNames.includes(name.toLowerCase());
 
     return `
       <div onclick="window.channelRenderer.openChannelModal('${name}')" 
@@ -103,7 +107,7 @@ class ChannelRenderer {
             </div>
             <span class="font-bold text-white text-sm group-hover:text-cyan-300 transition-colors">${name}</span>
           </div>
-          ${isPinned ? '<span class="text-xs px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 font-medium">Featured</span>' : ''}
+          ${isFeatured ? '<span class="text-xs px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 font-medium">Featured</span>' : ''}
         </div>
         <p class="text-xs text-gray-500 leading-relaxed mb-4 line-clamp-2">${topic}</p>
         <div class="flex items-center justify-between">
