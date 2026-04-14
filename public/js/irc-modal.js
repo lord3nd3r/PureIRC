@@ -110,15 +110,24 @@ class IRCModal {
   populateQuickPicks() {
     if (!this.quickPicksContainer) return;
 
-    this.quickPicksContainer.innerHTML = this.channels
+    // Use featured channels from config if available, otherwise fall back to popular channels
+    const featuredChannels = window.appConfig?.ui?.channelsDisplay?.featuredChannels || [];
+    const channelsToDisplay = featuredChannels.length > 0 
+      ? featuredChannels 
+      : this.channels.slice(0, 9).map(ch => ch.name);
+
+    this.quickPicksContainer.innerHTML = channelsToDisplay
       .slice(0, 9) // Limit to 9
-      .map(ch => `
-        <button type="button" 
-                onclick="window.ircModal.pickChannel('${ch.name}')" 
-                class="channel-pill text-xs px-3 py-1.5 rounded-full border border-white/10 text-gray-400 hover:text-white font-mono transition-colors">
-          ${ch.name}
-        </button>
-      `)
+      .map(ch => {
+        const channelName = typeof ch === 'string' ? ch : ch.name;
+        return `
+          <button type="button" 
+                  onclick="window.ircModal.pickChannel('${channelName}')" 
+                  class="channel-pill text-xs px-3 py-1.5 rounded-full border border-white/10 text-gray-400 hover:text-white font-mono transition-colors">
+            ${channelName}
+          </button>
+        `;
+      })
       .join('');
   }
 
