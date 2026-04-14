@@ -435,7 +435,8 @@ function setupChannelQuickPicks() {
   quickPicks.innerHTML = '';
 
   // Use featured channels from config if available
-    const cfg = window._serverConfig || window.configManager?.config;
+  const cfg = window._serverConfig || window.configManager?.config;
+  const featuredChannels = cfg?.ui?.channelsDisplay?.featuredChannels || [];
 
   if (featuredChannels.length > 0) {
     featuredChannels.forEach(name => {
