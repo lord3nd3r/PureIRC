@@ -1,4 +1,4 @@
-<![CDATA[<div align="center">
+<div align="center">
 
 # PureIRC
 
@@ -1137,4 +1137,4 @@ MIT — see [LICENSE](LICENSE) for details.
 <div align="center">
 <sub>Built with Node.js, Express, irc-framework, and vanilla JavaScript — no build step required.</sub>
 </div>
-]]>
+
