@@ -430,14 +430,27 @@ function setupChannelQuickPicks() {
   if (!quickPicks) return;
 
   quickPicks.innerHTML = '';
-  const allChannels = cachedChannels.length > 0 ? cachedChannels : getDefaultChannels();
-  const channels = allChannels.slice(0, 18);
 
-  channels.forEach(ch => {
-    quickPicks.innerHTML += `
-      <button type="button" onclick="pickChannel('${ch.name}')" class="channel-pill text-xs px-3 py-1.5 rounded-full border border-white/10 text-gray-400 hover:text-white font-mono">${ch.name}</button>
-    `;
-  });
+  // Use featured channels from config if available
+  const cfg = window.configManager?.config;
+  const featuredChannels = cfg?.ui?.channelsDisplay?.featuredChannels || [];
+
+  if (featuredChannels.length > 0) {
+    featuredChannels.forEach(name => {
+      quickPicks.innerHTML += `
+        <button type="button" onclick="pickChannel('${name}')" class="channel-pill text-xs px-3 py-1.5 rounded-full border border-white/10 text-gray-400 hover:text-white font-mono">${name}</button>
+      `;
+    });
+  } else {
+    const allChannels = cachedChannels.length > 0 ? cachedChannels : getDefaultChannels();
+    const channels = allChannels.slice(0, 18);
+
+    channels.forEach(ch => {
+      quickPicks.innerHTML += `
+        <button type="button" onclick="pickChannel('${ch.name}')" class="channel-pill text-xs px-3 py-1.5 rounded-full border border-white/10 text-gray-400 hover:text-white font-mono">${ch.name}</button>
+      `;
+    });
+  }
 }
 
 /**
