@@ -187,12 +187,26 @@ function renderChannels() {
 
   grid.innerHTML = '';
 
+  // Get featured channel names from config
+  const cfg = window._serverConfig || window.configManager?.config;
+  const featuredNames = (cfg?.ui?.channelsDisplay?.featuredChannels || []).map(n => n.toLowerCase());
+
   const allChannels = cachedChannels.length > 0 ? cachedChannels : getDefaultChannels();
-  const channels = allChannels.slice(0, 18);
+
+  // Sort: featured first, then by user count descending
+  const sorted = [...allChannels].sort((a, b) => {
+    const aFeat = featuredNames.includes(a.name.toLowerCase()) ? 1 : 0;
+    const bFeat = featuredNames.includes(b.name.toLowerCase()) ? 1 : 0;
+    if (aFeat !== bFeat) return bFeat - aFeat;
+    return (b.users || 0) - (a.users || 0);
+  });
+
+  const channels = sorted.slice(0, 18);
 
   channels.forEach(ch => {
     const category = ch.category || categorizeChannel(ch.name);
     const colorClass = categoryColors[category] || 'text-gray-400 bg-white/5 border-white/10';
+    const isFeatured = featuredNames.includes(ch.name.toLowerCase());
     const html = `
       <div onclick="openIrcModal('${ch.name}')" class="group bg-gray-900 hover:bg-gray-800/80 border border-white/5 hover:border-white/10 rounded-xl p-5 transition-all duration-200 hover:-translate-y-0.5 cursor-pointer">
         <div class="flex items-start justify-between mb-3">
@@ -202,7 +216,7 @@ function renderChannels() {
             </div>
             <span class="font-bold text-white text-sm group-hover:text-cyan-300 transition-colors">${ch.name}</span>
           </div>
-          ${ch.pinned ? '<span class="text-xs px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 font-medium">Featured</span>' : ''}
+          ${isFeatured ? '<span class="text-xs px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 font-medium">Featured</span>' : ''}
         </div>
         <p class="text-xs text-gray-500 leading-relaxed mb-4 line-clamp-2">${ch.topic}</p>
         <div class="flex items-center justify-between">
