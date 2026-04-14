@@ -5,8 +5,8 @@
     "domain": "3nd3r.net",
     "description": "A free, open, and welcoming IRC network. Connect with thousands of users across hundreds of channels — no registration required.",
     "tagline": "The Internet\nRelay Chat Network",
-    "footerDescription": "A free, open, and community-driven IRC network. Connecting people since 2003.",
-    "foundedYear": 2003,
+    "footerDescription": "A free, open, and community-driven IRC network. Connecting people since 2001.",
+    "foundedYear": 2001,
     "favicon": "vite.svg"
   },
   "irc": {
