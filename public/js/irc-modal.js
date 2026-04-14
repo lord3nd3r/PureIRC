@@ -111,7 +111,8 @@ class IRCModal {
     if (!this.quickPicksContainer) return;
 
     // Use featured channels from config if available, otherwise fall back to popular channels
-    const featuredChannels = window.appConfig?.ui?.channelsDisplay?.featuredChannels || [];
+    const cfg = window.configManager?.config;
+    const featuredChannels = cfg?.ui?.channelsDisplay?.featuredChannels || [];
     const channelsToDisplay = featuredChannels.length > 0 
       ? featuredChannels 
       : this.channels.slice(0, 9).map(ch => ch.name);
