@@ -41,7 +41,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // CORS Configuration
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+  origin: (process.env.CORS_ORIGIN || 'http://localhost:3000').split(',').map(o => o.trim()),
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
@@ -59,7 +59,14 @@ try {
 
 // Function to build final config (merging env overrides)
 function getFinalConfig() {
-  const config = JSON.parse(JSON.stringify(baseConfig)); // Deep copy
+  let config = {};
+  try {
+    const configPath = path.join(__dirname, 'config.json');
+    const configData = fs.readFileSync(configPath, 'utf8');
+    config = JSON.parse(configData);
+  } catch (err) {
+    config = JSON.parse(JSON.stringify(baseConfig)); // fallback to startup config
+  }
   
   // Override with environment variables if set
   if (process.env.IRC_HOST) config.irc.host = process.env.IRC_HOST;
@@ -68,6 +75,9 @@ function getFinalConfig() {
   if (process.env.IRC_NICK) config.irc.botName = process.env.IRC_NICK;
   if (process.env.IRC_USERNAME) config.irc.botUsername = process.env.IRC_USERNAME;
   if (process.env.IRC_REALNAME) config.irc.botRealname = process.env.IRC_REALNAME;
+  
+  // Update global config reference
+  global.appConfig = config;
   
   return config;
 }
@@ -132,21 +142,39 @@ async function renderTemplate(filePath, res) {
 // ========== CONFIG ENDPOINT ==========
 app.get('/api/config', async (req, res) => {
   const config = getFinalConfig();
-  
-  // Add real channel count from IRC cache
+
+  // Resolve live channel count from IRC cache
+  let maxChannels = config.irc?.maxChannels || 0;
   try {
     const cache = getCache();
     const channels = await cache.getChannels();
-    config.irc.maxChannels = channels.length;
+    maxChannels = channels.length;
   } catch (err) {
     console.warn('[Config] Could not fetch live channel count:', err.message);
-    // Fall back to config value if available
-    if (!config.irc.maxChannels) {
-      config.irc.maxChannels = 0;
-    }
   }
-  
-  res.json(config);
+
+  // Only expose the fields the frontend actually needs — never dump the full config
+  res.json({
+    site: {
+      name:               config.site?.name,
+      domain:             config.site?.domain,
+      description:        config.site?.description,
+      tagline:            config.site?.tagline,
+      footerDescription:  config.site?.footerDescription,
+      foundedYear:        config.site?.foundedYear,
+    },
+    irc: {
+      host:           config.irc?.host,
+      port:           config.irc?.port,
+      portSSL:        config.irc?.portSSL,
+      defaultChannel: config.irc?.defaultChannel,
+      userPrefix:     config.irc?.userPrefix,
+      maxChannels,
+    },
+    social: {
+      supportChannel: config.social?.supportChannel,
+    },
+  });
 });
 
 // ========== ROOT ROUTE ==========

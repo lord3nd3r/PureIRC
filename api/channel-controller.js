@@ -101,14 +101,15 @@ export async function searchChannels(req, res) {
 
 export async function getPopularChannels(req, res) {
   try {
-    const { limit = 10 } = req.query;
+    const { limit: rawLimit } = req.query;
+    const limit = Math.min(Math.max(1, parseInt(rawLimit) || 10), 50);
     const cache = getCache();
     const channels = await cache.getChannels();
 
     // Sort by user count descending
     const popular = channels
       .sort((a, b) => b.users - a.users)
-      .slice(0, Math.min(parseInt(limit), 50));
+      .slice(0, limit);
 
     res.json({
       success: true,

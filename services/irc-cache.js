@@ -21,6 +21,10 @@ class IRCCache {
     this.ircService = new IRCService();
     this.connected = false;
     this.refreshInterval = null;
+    this._refreshingChannels = null;  // in-flight promise guard
+    this._refreshingStats = null;     // in-flight promise guard
+    this._isInitializing = false;     // prevent stacked init retries
+    this._initDelay = 10000;          // backoff for init retries
 
     // When the bot reconnects, refresh data immediately
     this.ircService.onReconnect = () => {
@@ -37,9 +41,13 @@ class IRCCache {
    * Initialize IRC connection and periodic refresh
    */
   async init() {
+    if (this._isInitializing) return;
+    this._isInitializing = true;
     try {
       await this.ircService.connect();
       this.connected = true;
+      this._isInitializing = false;
+      this._initDelay = 10000; // reset backoff on success
       console.log('[Cache] IRC connection established');
 
       // Do initial fetch
@@ -49,10 +57,14 @@ class IRCCache {
       // Set up periodic refresh
       this.startPeriodicRefresh();
     } catch (err) {
+      this._isInitializing = false;
       console.error('[Cache] Failed to initialize:', err.message);
       this.connected = false;
-      // Retry connection every 10 seconds
-      setTimeout(() => this.init(), 10000);
+      // Retry with backoff (10s → 20s → 40s … cap 5 min)
+      const delay = this._initDelay;
+      this._initDelay = Math.min(delay * 2, 5 * 60 * 1000);
+      console.log(`[Cache] Retrying init in ${delay / 1000}s...`);
+      setTimeout(() => this.init(), delay);
     }
   }
 
@@ -80,53 +92,65 @@ class IRCCache {
   }
 
   /**
-   * Refresh channel list from IRC
+   * Refresh channel list from IRC (deduplicated — only one in-flight at a time)
    */
   async refreshChannels() {
-    try {
-      const channels = await this.ircService.getChannels();
-      
-      // Format channels
-      const formatted = channels.map(ch => ({
-        name: ch.name || '#unknown',
-        users: ch.users || 0,
-        topic: ch.topic || 'No topic set'
-      }));
+    if (this._refreshingChannels) return this._refreshingChannels;
+    this._refreshingChannels = (async () => {
+      try {
+        const channels = await this.ircService.getChannels();
 
-      // Sort by user count descending
-      formatted.sort((a, b) => b.users - a.users);
+        // Format channels
+        const formatted = channels.map(ch => ({
+          name: ch.name || '#unknown',
+          users: ch.users || 0,
+          topic: ch.topic || 'No topic set'
+        }));
 
-      this.cache.channels.data = formatted;
-      this.cache.channels.timestamp = Date.now();
+        // Sort by user count descending
+        formatted.sort((a, b) => b.users - a.users);
 
-      console.log(`[Cache] Fetched ${formatted.length} channels`);
-      return formatted;
-    } catch (err) {
-      console.error('[Cache] Error fetching channels:', err.message);
-      throw err;
-    }
+        this.cache.channels.data = formatted;
+        this.cache.channels.timestamp = Date.now();
+
+        console.log(`[Cache] Fetched ${formatted.length} channels`);
+        return formatted;
+      } catch (err) {
+        console.error('[Cache] Error fetching channels:', err.message);
+        throw err;
+      } finally {
+        this._refreshingChannels = null;
+      }
+    })();
+    return this._refreshingChannels;
   }
 
   /**
-   * Refresh server stats from IRC
+   * Refresh server stats from IRC (deduplicated — only one in-flight at a time)
    */
   async refreshStats() {
-    try {
-      const stats = await this.ircService.getServerStats();
-      
-      this.cache.stats.data = {
-        ...stats,
-        cached: true,
-        cachedAt: new Date().toISOString()
-      };
-      this.cache.stats.timestamp = Date.now();
+    if (this._refreshingStats) return this._refreshingStats;
+    this._refreshingStats = (async () => {
+      try {
+        const stats = await this.ircService.getServerStats();
 
-      console.log(`[Cache] Fetched server stats: ${stats.usersOnline} users online`);
-      return this.cache.stats.data;
-    } catch (err) {
-      console.error('[Cache] Error fetching stats:', err.message);
-      throw err;
-    }
+        this.cache.stats.data = {
+          ...stats,
+          cached: true,
+          cachedAt: new Date().toISOString()
+        };
+        this.cache.stats.timestamp = Date.now();
+
+        console.log(`[Cache] Fetched server stats: ${stats.usersOnline} users online`);
+        return this.cache.stats.data;
+      } catch (err) {
+        console.error('[Cache] Error fetching stats:', err.message);
+        throw err;
+      } finally {
+        this._refreshingStats = null;
+      }
+    })();
+    return this._refreshingStats;
   }
 
   /**

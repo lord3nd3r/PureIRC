@@ -14,7 +14,7 @@ function getIrcConfig() {
   };
 }
 
-const WEBIRC_PASSWORD = process.env.WEBIRC_PASSWORD || '';
+
 const MAX_CONNECTIONS_PER_IP = 3;
 const CONNECTION_TIMEOUT = 30000;
 const MAX_MESSAGE_LENGTH = 512;
@@ -47,7 +47,7 @@ export function attachGateway(server) {
 
     let ircClient = null;
     let connected = false;
-    let joinedChannels = new Set();
+
 
     function send(data) {
       if (ws.readyState === ws.OPEN) {
@@ -67,7 +67,6 @@ export function attachGateway(server) {
         ircClient = null;
       }
       connected = false;
-      joinedChannels.clear();
     }
 
     ws.on('close', (code, reason) => {
@@ -93,14 +92,13 @@ export function attachGateway(server) {
         case 'connect': {
           if (connected || ircClient) return;
 
+          const CONFIG = getIrcConfig();
           let nickname = String(msg.nickname || '').trim();
           if (!nickname || !/^[a-zA-Z_\[\]\\`^{}|][a-zA-Z0-9_\[\]\\`^{}|\-]{0,15}$/.test(nickname)) {
-            const CONFIG = getIrcConfig();
-            const prefix = CONFIG.userPrefix || 'User';
+            const prefix = (global.appConfig?.irc?.userPrefix) || 'User';
             nickname = prefix + Math.floor(Math.random() * 9999);
           }
           const useSSL = Boolean(msg.ssl);
-          const CONFIG = getIrcConfig();
           const port = useSSL ? CONFIG.sslPort : CONFIG.port;
 
           console.log(`[Gateway] Connect request: nick=${nickname}, host=${CONFIG.host}, port=${port}, ssl=${useSSL}`);
@@ -127,9 +125,10 @@ export function attachGateway(server) {
           };
 
           // WEBIRC: pass the real client IP to the IRC server
-          if (WEBIRC_PASSWORD) {
+          const webircPassword = CONFIG.webircPassword;
+          if (webircPassword) {
             connectOpts.webirc = {
-              password: WEBIRC_PASSWORD,
+              password: webircPassword,
               username: 'webchat',
               hostname: ip,
               address: ip,
@@ -203,10 +202,7 @@ export function attachGateway(server) {
               channel: event.channel,
               time: Date.now(),
             });
-            // If it's us joining, request the user list
-            if (event.nick === ircClient.user.nick) {
-              joinedChannels.add(event.channel);
-            }
+
           });
 
           ircClient.on('part', (event) => {
@@ -217,9 +213,7 @@ export function attachGateway(server) {
               message: event.message || '',
               time: Date.now(),
             });
-            if (event.nick === ircClient.user.nick) {
-              joinedChannels.delete(event.channel);
-            }
+
           });
 
           ircClient.on('kick', (event) => {
@@ -231,9 +225,7 @@ export function attachGateway(server) {
               reason: event.message || '',
               time: Date.now(),
             });
-            if (event.kicked === ircClient.user.nick) {
-              joinedChannels.delete(event.channel);
-            }
+
           });
 
           ircClient.on('quit', (event) => {

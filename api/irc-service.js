@@ -10,6 +10,7 @@ class IRCService {
     this.channels = [];
     this.serverInfo = {};
     this.reconnectTimer = null;
+    this.reconnectDelay = 15000;  // starts at 15s, doubles up to 5 min
     this.onReconnect = null; // callback for cache to know when we reconnect
   }
 
@@ -88,21 +89,26 @@ class IRCService {
   }
 
   /**
-   * Schedule a reconnect attempt
+   * Schedule a reconnect attempt with exponential backoff (15s → 30s → 60s → … cap 5min)
    */
   _scheduleReconnect() {
     if (this.reconnectTimer) return;
+    const delay = this.reconnectDelay;
+    console.log(`[IRC] Scheduling reconnect in ${delay / 1000}s...`);
     this.reconnectTimer = setTimeout(async () => {
       this.reconnectTimer = null;
       try {
         await this.connect();
         console.log('[IRC] Reconnected successfully');
+        this.reconnectDelay = 15000; // reset backoff on success
         if (this.onReconnect) this.onReconnect();
       } catch (err) {
         console.error('[IRC] Reconnect failed:', err.message);
-        // will retry via socket close handler
+        // Double the delay for next attempt, cap at 5 minutes
+        this.reconnectDelay = Math.min(this.reconnectDelay * 2, 5 * 60 * 1000);
+        // will retry via socket close handler on the new client
       }
-    }, 15000);
+    }, delay);
   }
 
   /**
@@ -207,8 +213,8 @@ class IRCService {
       this.client.on('userlist', onNames);
 
       // Get channel info
-      this.client.raw('TOPIC', channelName);
-      this.client.raw('NAMES', channelName);
+      this.client.raw('TOPIC ' + channelName);
+      this.client.raw('NAMES ' + channelName);
 
       setTimeout(() => {
         cleanup();
