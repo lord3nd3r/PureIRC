@@ -78,7 +78,11 @@ class IRCService {
         setTimeout(() => {
           if (!resolved) {
             resolved = true;
-            this.disconnect();
+            // Drop the stuck client without clearing the reconnect chain
+            const stuck = this.client;
+            try { stuck.removeAllListeners(); stuck.quit('timeout'); } catch {}
+            try { stuck.connection && stuck.connection.end && stuck.connection.end(); } catch {}
+            this.connected = false;
             reject(new Error('IRC connection timeout'));
           }
         }, 15000);
@@ -106,7 +110,8 @@ class IRCService {
         console.error('[IRC] Reconnect failed:', err.message);
         // Double the delay for next attempt, cap at 5 minutes
         this.reconnectDelay = Math.min(this.reconnectDelay * 2, 5 * 60 * 1000);
-        // will retry via socket close handler on the new client
+        // Always schedule the next attempt; don't rely on 'socket close' firing
+        this._scheduleReconnect();
       }
     }, delay);
   }
