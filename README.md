@@ -259,7 +259,7 @@ The `{{MAX_CHANNELS}}` variable is fetched live from the IRC cache at render tim
 │  │                    IRC Service (Bot)                          │ │
 │  │  • Persistent connection to IRCd                             │ │
 │  │  • Sends LIST and LUSERS commands                            │ │
-│  │  • Auto-reconnect with 15s delay                             │ │
+│  │  • Auto-reconnect, 15s-5m backoff                            │ │
 │  │  • Nick collision handling (random suffix)                   │ │
 │  └──────────────────────────┬───────────────────────────────────┘ │
 │                             │ TCP (irc-framework)                 │
@@ -324,7 +324,7 @@ A persistent background IRC connection (`IRCService` class) that:
 
 1. Connects to the configured IRCd on startup with configurable nick/username/realname
 2. Handles nick collisions by appending a random 3-digit suffix
-3. Auto-reconnects on disconnect with a 15-second delay
+3. Auto-reconnects on disconnect, starting at 15 seconds and doubling up to 5 minutes between attempts; retries keep going even if a connect attempt times out
 4. Responds to `LIST` and `LUSERS` commands to populate the cache
 5. Fires a reconnect callback so the cache layer can immediately refresh after reconnecting
 6. 15-second timeout on initial connection and data queries
@@ -1110,7 +1110,7 @@ PureIRC is designed as a **white-label solution**. To deploy it for any IRC netw
 | **User prefixes not showing** | NAMES reply race condition | Prefixes are set from both NAMES and MODE events with merge logic. If missing, check browser console for mode-related errors |
 | **Nick in use on connect** | Another client using the same nick | The gateway auto-appends `_` on `nick in use`. For the bot, it appends a random 3-digit number |
 | **"Too many connections" error** | 3+ WebSocket connections from same IP | Close other tabs/windows. Rate limit is 3 per IP (configurable in `irc-gateway.js`, `MAX_CONNECTIONS_PER_IP`) |
-| **Channel grid not updating** | Cache stale or bot disconnected | Check `curl http://localhost:3000/api/stats` — look at `cacheStatus.connected`. The bot auto-reconnects every 15 seconds |
+| **Channel grid not updating** | Cache stale or bot disconnected | Check `curl http://localhost:3000/api/stats` — look at `cacheStatus.connected`. The bot auto-reconnects with backoff (15s, doubling up to 5 min) |
 | **Port 3000 already in use** | Another process on port 3000 | `lsof -i :3000` to find it, or change `PORT` in `.env` |
 
 ---
